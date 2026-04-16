@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
@@ -26,16 +26,17 @@ export function Register() {
   const [authorEmail, setAuthorEmail] = useState('');
   const [authorPassword, setAuthorPassword] = useState('');
 
-  if (isAuthenticated && user) {
-    const redirectMap: Record<string, string> = {
-      author: '/author',
-      student: '/student',
-      curator: '/curator',
-      admin: '/admin',
-    };
-    navigate(redirectMap[user.role] || '/');
-    return null;
-  }
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      const redirectMap: Record<string, string> = {
+        author: '/author',
+        student: '/student',
+        curator: '/curator',
+        admin: '/admin',
+      };
+      navigate(redirectMap[user.role] || '/', { replace: true });
+    }
+  }, [isAuthenticated, user, navigate]);
 
   const handleStudentRegister = async (e: React.FormEvent) => {
     e.preventDefault();

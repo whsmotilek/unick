@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
@@ -33,6 +33,11 @@ export function StudentLesson() {
   const course = getCourse(id || '');
   const lessonInfo = getLesson(id || '', lessonId || '');
 
+  // Auto-expand current module when lesson changes
+  useEffect(() => {
+    if (lessonInfo) setExpandedModule(lessonInfo.module.id);
+  }, [lessonInfo?.module.id]);
+
   // Build flat lesson list for navigation
   const allLessons = useMemo(() => {
     if (!course) return [];
@@ -65,11 +70,6 @@ export function StudentLesson() {
   const { lesson, module } = lessonInfo;
   const completed = user ? isLessonComplete(user.id, course.id, lesson.id) : false;
   const courseProgress = user ? getCourseProgress(user.id, course.id) : 0;
-
-  // Auto-expand the current module
-  if (expandedModule === null) {
-    setExpandedModule(module.id);
-  }
 
   const handleComplete = () => {
     if (!user) return;
