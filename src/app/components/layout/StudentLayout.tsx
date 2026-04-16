@@ -15,7 +15,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { mockUsers } from '../../data/mockData';
-import logo from 'figma:asset/d1f4fdcdf2cbedfd13a90150fb918f6e78560c92.png';
+import logo from '@/assets/d1f4fdcdf2cbedfd13a90150fb918f6e78560c92.png';
 
 const navigation = [
   { name: 'Главная', href: '/student', icon: LayoutDashboard },

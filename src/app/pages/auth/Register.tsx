@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/ta
 import { Badge } from '../../components/ui/badge';
 import { Link, useNavigate } from 'react-router';
 import { GraduationCap, BookOpen, Check, Sparkles } from 'lucide-react';
-import logo from 'figma:asset/d1f4fdcdf2cbedfd13a90150fb918f6e78560c92.png';
+import logo from '@/assets/d1f4fdcdf2cbedfd13a90150fb918f6e78560c92.png';
 
 export function Register() {
   const navigate = useNavigate();

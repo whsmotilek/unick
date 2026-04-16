@@ -16,7 +16,7 @@ import {
   Zap
 } from 'lucide-react';
 import { Link } from 'react-router';
-import logo from 'figma:asset/d1f4fdcdf2cbedfd13a90150fb918f6e78560c92.png';
+import logo from '@/assets/d1f4fdcdf2cbedfd13a90150fb918f6e78560c92.png';
 
 export function Landing() {
   const features = [

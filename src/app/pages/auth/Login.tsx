@@ -6,7 +6,7 @@ import { Card, CardContent } from '../../components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { Link, useNavigate } from 'react-router';
 import { GraduationCap, BookOpen } from 'lucide-react';
-import logo from 'figma:asset/d1f4fdcdf2cbedfd13a90150fb918f6e78560c92.png';
+import logo from '@/assets/d1f4fdcdf2cbedfd13a90150fb918f6e78560c92.png';
 
 export function Login() {
   const navigate = useNavigate();
