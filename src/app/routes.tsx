@@ -39,6 +39,8 @@ function Placeholder({ title }: { title: string }) {
   );
 }
 
+const basename = import.meta.env.BASE_URL.replace(/\/$/, '');
+
 export const router = createBrowserRouter([
   {
     path: '/',
@@ -186,4 +188,4 @@ export const router = createBrowserRouter([
       </div>
     )
   }
-]);
+], { basename });
