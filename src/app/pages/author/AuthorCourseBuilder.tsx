@@ -1,404 +1,470 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
+import { Textarea } from '../../components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
-import { 
-  ArrowLeft,
-  Save,
-  Eye,
-  Plus,
-  GripVertical,
-  Video,
-  FileText,
-  CheckSquare,
-  BookOpen,
-  Settings,
-  Users,
-  BarChart3,
-  Trash2,
-  Edit,
-  ChevronDown,
-  ChevronUp
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../../components/ui/alert-dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
+import {
+  ArrowLeft, Save, Plus, Video, FileText, CheckSquare, BookOpen, Trash2, Edit, ChevronDown, ChevronUp
 } from 'lucide-react';
-import { Link, useParams } from 'react-router';
+import { Link, useParams, useNavigate } from 'react-router';
+import { useDataStore } from '../../store/DataStore';
+import { toast } from 'sonner';
+import { Lesson } from '../../types';
+
+const lessonIcons = {
+  video: Video,
+  text: FileText,
+  quiz: CheckSquare,
+  homework: BookOpen,
+  audio: FileText,
+  file: FileText,
+};
+
+const lessonLabels = {
+  video: 'Видео',
+  text: 'Текст',
+  quiz: 'Тест',
+  homework: 'Домашка',
+  audio: 'Аудио',
+  file: 'Файл',
+};
 
 export function AuthorCourseBuilder() {
   const { id } = useParams();
-  const [expandedModule, setExpandedModule] = useState<number | null>(0);
+  const navigate = useNavigate();
+  const isNew = !id || id === 'new';
+  const { getCourse, createCourse, updateCourse, deleteCourse, addModule, updateModule, deleteModule, addLesson, updateLesson, deleteLesson } = useDataStore();
 
-  const course = {
-    id: id || 'new',
-    title: 'Основы UI/UX Дизайна',
-    description: 'Комплексный курс по основам пользовательского опыта и интерфейсов',
-    status: 'published'
+  const existingCourse = !isNew ? getCourse(id!) : undefined;
+  const [courseId, setCourseId] = useState<string | undefined>(existingCourse?.id);
+  const course = courseId ? getCourse(courseId) : undefined;
+
+  const [title, setTitle] = useState(course?.title || '');
+  const [description, setDescription] = useState(course?.description || '');
+  const [cover, setCover] = useState(course?.cover || '');
+  const [status, setStatus] = useState<'draft' | 'published'>(course?.status === 'archived' ? 'draft' : (course?.status || 'draft'));
+  const [expandedModule, setExpandedModule] = useState<string | null>(course?.modules[0]?.id || null);
+
+  // Sync local state when course changes
+  useEffect(() => {
+    if (course) {
+      setTitle(course.title);
+      setDescription(course.description);
+      setCover(course.cover || '');
+      setStatus(course.status === 'archived' ? 'draft' : course.status);
+    }
+  }, [course?.id]);
+
+  // Module dialog
+  const [moduleDialogOpen, setModuleDialogOpen] = useState(false);
+  const [moduleEditId, setModuleEditId] = useState<string | null>(null);
+  const [moduleTitle, setModuleTitle] = useState('');
+
+  // Lesson dialog
+  const [lessonDialogOpen, setLessonDialogOpen] = useState(false);
+  const [lessonModuleId, setLessonModuleId] = useState<string | null>(null);
+  const [lessonEditId, setLessonEditId] = useState<string | null>(null);
+  const [lessonTitle, setLessonTitle] = useState('');
+  const [lessonType, setLessonType] = useState<Lesson['type']>('video');
+  const [lessonContent, setLessonContent] = useState('');
+
+  // Delete confirmations
+  const [deleteCourseOpen, setDeleteCourseOpen] = useState(false);
+  const [deleteModuleId, setDeleteModuleId] = useState<string | null>(null);
+  const [deleteLessonInfo, setDeleteLessonInfo] = useState<{ moduleId: string; lessonId: string } | null>(null);
+
+  const handleSaveCourse = () => {
+    if (!title.trim()) {
+      toast.error('Введите название курса');
+      return;
+    }
+    if (isNew && !courseId) {
+      const newCourse = createCourse({ title, description, cover, status });
+      setCourseId(newCourse.id);
+      toast.success('Курс создан!');
+      navigate(`/author/courses/${newCourse.id}`, { replace: true });
+    } else if (courseId) {
+      updateCourse(courseId, { title, description, cover, status });
+      toast.success('Курс сохранён!');
+    }
   };
 
-  const modules = [
-    {
-      id: 1,
-      title: 'Введение в UI/UX',
-      lessons: [
-        { id: 1, title: 'Что такое UX дизайн?', type: 'video', duration: '15 мин' },
-        { id: 2, title: 'Основные принципы', type: 'text', duration: '10 мин' },
-        { id: 3, title: 'Тест: Основы UX', type: 'quiz', duration: '5 мин' }
-      ]
-    },
-    {
-      id: 2,
-      title: 'Исследование пользователей',
-      lessons: [
-        { id: 4, title: 'Методы исследования', type: 'video', duration: '20 мин' },
-        { id: 5, title: 'Создание персон', type: 'text', duration: '15 мин' },
-        { id: 6, title: 'Домашка: Интервью', type: 'homework', duration: '30 мин' }
-      ]
-    },
-    {
-      id: 3,
-      title: 'Проектирование интерфейсов',
-      lessons: [
-        { id: 7, title: 'Вайрфреймы', type: 'video', duration: '25 мин' },
-        { id: 8, title: 'Прототипирование', type: 'video', duration: '30 мин' }
-      ]
-    }
-  ];
-
-  const getLessonIcon = (type: string) => {
-    switch (type) {
-      case 'video': return Video;
-      case 'text': return FileText;
-      case 'quiz': return CheckSquare;
-      case 'homework': return BookOpen;
-      default: return FileText;
-    }
+  const handleAddModule = () => {
+    setModuleEditId(null);
+    setModuleTitle('');
+    setModuleDialogOpen(true);
   };
 
-  const getLessonColor = (type: string) => {
-    switch (type) {
-      case 'video': return 'bg-[#FFE5D9]';
-      case 'text': return 'bg-[#EDE9FF]';
-      case 'quiz': return 'bg-[#F5E642]';
-      case 'homework': return 'bg-[#C5E8A0]';
-      default: return 'bg-[#F5F4F2]';
-    }
+  const handleEditModule = (mid: string, currentTitle: string) => {
+    setModuleEditId(mid);
+    setModuleTitle(currentTitle);
+    setModuleDialogOpen(true);
   };
+
+  const submitModule = () => {
+    if (!moduleTitle.trim() || !courseId) return;
+    if (moduleEditId) {
+      updateModule(courseId, moduleEditId, { title: moduleTitle });
+      toast.success('Модуль обновлён');
+    } else {
+      const m = addModule(courseId, moduleTitle);
+      setExpandedModule(m.id);
+      toast.success('Модуль добавлен');
+    }
+    setModuleDialogOpen(false);
+  };
+
+  const handleAddLesson = (moduleId: string) => {
+    setLessonModuleId(moduleId);
+    setLessonEditId(null);
+    setLessonTitle('');
+    setLessonType('video');
+    setLessonContent('');
+    setLessonDialogOpen(true);
+  };
+
+  const handleEditLesson = (moduleId: string, lesson: Lesson) => {
+    setLessonModuleId(moduleId);
+    setLessonEditId(lesson.id);
+    setLessonTitle(lesson.title);
+    setLessonType(lesson.type);
+    setLessonContent(typeof lesson.content?.data === 'object' ? (lesson.content.data.url || lesson.content.data.html || lesson.content.data.instructions || '') : '');
+    setLessonDialogOpen(true);
+  };
+
+  const submitLesson = () => {
+    if (!lessonTitle.trim() || !lessonModuleId || !courseId) return;
+    let content;
+    if (lessonType === 'video') {
+      content = { type: 'video' as const, data: { url: lessonContent } };
+    } else if (lessonType === 'text') {
+      content = { type: 'text' as const, data: { html: lessonContent } };
+    } else if (lessonType === 'homework') {
+      content = { type: 'homework' as const, data: { instructions: lessonContent, deadline: new Date(Date.now() + 7 * 86400000).toISOString() } };
+    } else {
+      content = { type: lessonType, data: { description: lessonContent } };
+    }
+
+    if (lessonEditId) {
+      updateLesson(courseId, lessonModuleId, lessonEditId, { title: lessonTitle, type: lessonType, content });
+      toast.success('Урок обновлён');
+    } else {
+      addLesson(courseId, lessonModuleId, { title: lessonTitle, type: lessonType, content });
+      toast.success('Урок добавлен');
+    }
+    setLessonDialogOpen(false);
+  };
+
+  const handleDeleteCourse = () => {
+    if (!courseId) return;
+    deleteCourse(courseId);
+    toast.success('Курс удалён');
+    navigate('/author/courses');
+  };
+
+  if (!isNew && !course) {
+    return (
+      <div className="p-6">
+        <Card className="border-0">
+          <CardContent className="p-12 text-center">
+            <h2 className="text-[24px] font-bold mb-3" style={{ fontFamily: 'var(--font-heading)' }}>Курс не найден</h2>
+            <Link to="/author/courses">
+              <Button>← К списку курсов</Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-[#F5F4F2]">
+    <div className="p-6 max-w-6xl mx-auto">
       {/* Header */}
-      <header className="bg-white border-b border-[#1A1A2E]/10 px-8 py-5">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link to="/author/courses">
-              <Button variant="ghost" size="icon">
-                <ArrowLeft className="w-5 h-5" />
-              </Button>
-            </Link>
-            <div>
-              <div className="flex items-center gap-3 mb-1">
-                <h1 className="text-[28px] font-bold text-[#1A1A2E]" style={{ fontFamily: 'var(--font-heading)' }}>
-                  {course.title}
-                </h1>
-                <Badge variant={course.status === 'published' ? 'success' : 'secondary'}>
-                  {course.status === 'published' ? 'Опубликован' : 'Черновик'}
-                </Badge>
-              </div>
-              <p className="text-[13px] text-[#8A8A9A]" style={{ fontFamily: 'var(--font-body)' }}>
-                Редактируйте контент курса и управляйте модулями
-              </p>
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-3">
-            <Button variant="outline" className="gap-2">
-              <Eye className="w-4 h-4" />
-              Предпросмотр
+      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+        <div className="flex items-center gap-3">
+          <Link to="/author/courses">
+            <Button variant="ghost" size="icon">
+              <ArrowLeft className="w-4 h-4" />
             </Button>
-            <Button className="gap-2">
-              <Save className="w-4 h-4" />
-              Сохранить
-            </Button>
+          </Link>
+          <div>
+            <h1 className="text-[24px] font-bold text-[#1A1A2E]" style={{ fontFamily: 'var(--font-heading)' }}>
+              {isNew && !courseId ? 'Новый курс' : title || 'Без названия'}
+            </h1>
+            <p className="text-[13px] text-[#8A8A9A]" style={{ fontFamily: 'var(--font-body)' }}>
+              {isNew && !courseId ? 'Создайте свой первый курс' : 'Редактирование курса'}
+            </p>
           </div>
         </div>
-      </header>
+        <div className="flex items-center gap-2">
+          <Badge variant={status === 'published' ? 'success' : 'secondary'}>
+            {status === 'published' ? 'Опубликован' : 'Черновик'}
+          </Badge>
+          {courseId && (
+            <Button variant="outline" size="sm" onClick={() => setDeleteCourseOpen(true)}>
+              <Trash2 className="w-4 h-4 mr-1" />Удалить
+            </Button>
+          )}
+          <Button onClick={handleSaveCourse} className="transition-transform active:scale-[0.98]">
+            <Save className="w-4 h-4 mr-2" />Сохранить
+          </Button>
+        </div>
+      </div>
 
-      {/* Main Content */}
-      <main className="p-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Course Structure */}
-          <div className="lg:col-span-2">
-            <Tabs defaultValue="content" className="w-full">
-              <TabsList className="bg-white mb-6 p-1 rounded-xl border border-[#1A1A2E]/10">
-                <TabsTrigger value="content" className="gap-2">
-                  <BookOpen className="w-4 h-4" />
-                  Контент
-                </TabsTrigger>
-                <TabsTrigger value="settings" className="gap-2">
-                  <Settings className="w-4 h-4" />
-                  Настройки
-                </TabsTrigger>
-                <TabsTrigger value="students" className="gap-2">
-                  <Users className="w-4 h-4" />
-                  Ученики
-                </TabsTrigger>
-                <TabsTrigger value="analytics" className="gap-2">
-                  <BarChart3 className="w-4 h-4" />
-                  Аналитика
-                </TabsTrigger>
-              </TabsList>
+      <Tabs defaultValue="content" className="space-y-4">
+        <TabsList className="bg-white border-0 p-1 rounded-xl">
+          <TabsTrigger value="content" className="rounded-lg">Содержимое</TabsTrigger>
+          <TabsTrigger value="settings" className="rounded-lg">Настройки</TabsTrigger>
+        </TabsList>
 
-              <TabsContent value="content" className="space-y-4">
-                {/* Add Module Button */}
-                <Button variant="outline" className="w-full gap-2 h-12 border-2 border-dashed border-[#1A1A2E]/20 hover:border-[#7C6AF7]/40">
-                  <Plus className="w-5 h-5" />
-                  Добавить модуль
-                </Button>
-
-                {/* Modules */}
-                {modules.map((module) => (
-                  <Card key={module.id} className="overflow-hidden">
-                    <div 
-                      className="bg-gradient-to-r from-[#7C6AF7] to-[#9B8AF9] p-5 cursor-pointer"
-                      onClick={() => setExpandedModule(expandedModule === module.id ? null : module.id)}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3 flex-1">
-                          <GripVertical className="w-5 h-5 text-white/50" />
-                          <div>
-                            <h3 className="text-[16px] font-semibold text-white mb-1" style={{ fontFamily: 'var(--font-heading)' }}>
-                              Модуль {module.id}: {module.title}
-                            </h3>
-                            <p className="text-[11px] text-white/80" style={{ fontFamily: 'var(--font-body)' }}>
-                              {module.lessons.length} уроков
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Button variant="ghost" size="icon" className="text-white hover:bg-white/20">
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="text-white hover:bg-white/20">
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                          {expandedModule === module.id ? (
-                            <ChevronUp className="w-5 h-5 text-white" />
-                          ) : (
-                            <ChevronDown className="w-5 h-5 text-white" />
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {expandedModule === module.id && (
-                      <CardContent className="p-0">
-                        <div className="divide-y divide-[#1A1A2E]/5">
-                          {module.lessons.map((lesson) => {
-                            const Icon = getLessonIcon(lesson.type);
-                            return (
-                              <div 
-                                key={lesson.id} 
-                                className="p-4 hover:bg-[#F5F4F2] transition-colors flex items-center gap-4"
-                              >
-                                <GripVertical className="w-4 h-4 text-[#8A8A9A]" />
-                                <div className={`w-10 h-10 rounded-xl ${getLessonColor(lesson.type)} flex items-center justify-center`}>
-                                  <Icon className="w-5 h-5 text-[#1A1A2E]" strokeWidth={1.5} />
-                                </div>
-                                <div className="flex-1">
-                                  <p className="text-[13px] font-medium text-[#1A1A2E] mb-0.5" style={{ fontFamily: 'var(--font-body)' }}>
-                                    {lesson.title}
-                                  </p>
-                                  <p className="text-[11px] text-[#8A8A9A]" style={{ fontFamily: 'var(--font-body)' }}>
-                                    {lesson.duration}
-                                  </p>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <Button variant="ghost" size="sm">
-                                    <Edit className="w-3.5 h-3.5" />
-                                  </Button>
-                                  <Button variant="ghost" size="sm">
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                  </Button>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                        
-                        <div className="p-4 border-t border-[#1A1A2E]/5">
-                          <Button variant="outline" className="w-full gap-2" size="sm">
-                            <Plus className="w-4 h-4" />
-                            Добавить урок
-                          </Button>
-                        </div>
-                      </CardContent>
-                    )}
-                  </Card>
-                ))}
-              </TabsContent>
-
-              <TabsContent value="settings">
-                <Card>
-                  <CardContent className="p-6 space-y-6">
-                    <div>
-                      <Label htmlFor="course-title">Название курса</Label>
-                      <Input 
-                        id="course-title" 
-                        defaultValue={course.title}
-                        className="mt-2 h-11 rounded-xl border-[#1A1A2E]/10"
-                      />
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="course-description">Описание</Label>
-                      <textarea 
-                        id="course-description"
-                        defaultValue={course.description}
-                        className="mt-2 w-full min-h-[120px] px-4 py-3 rounded-xl border border-[#1A1A2E]/10 focus:outline-none focus:ring-2 focus:ring-[#7C6AF7] resize-none"
-                        style={{ fontFamily: 'var(--font-body)' }}
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="course-price">Цена (₽)</Label>
-                        <Input 
-                          id="course-price" 
-                          type="number"
-                          defaultValue="15000"
-                          className="mt-2 h-11 rounded-xl border-[#1A1A2E]/10"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="course-duration">Длительность</Label>
-                        <Input 
-                          id="course-duration" 
-                          defaultValue="8 недель"
-                          className="mt-2 h-11 rounded-xl border-[#1A1A2E]/10"
-                        />
-                      </div>
-                    </div>
-
-                    <Button className="w-full">
-                      Сохранить настройки
-                    </Button>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="students">
-                <Card>
-                  <CardContent className="p-8 text-center">
-                    <Users className="w-12 h-12 text-[#8A8A9A] mx-auto mb-3" />
-                    <p className="text-[13px] text-[#8A8A9A]" style={{ fontFamily: 'var(--font-body)' }}>
-                      Управление учениками доступно в разделе "Ученики"
-                    </p>
-                    <Link to="/author/students">
-                      <Button variant="outline" className="mt-4">
-                        Перейти к ученикам
-                      </Button>
-                    </Link>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="analytics">
-                <Card>
-                  <CardContent className="p-8 text-center">
-                    <BarChart3 className="w-12 h-12 text-[#8A8A9A] mx-auto mb-3" />
-                    <p className="text-[13px] text-[#8A8A9A]" style={{ fontFamily: 'var(--font-body)' }}>
-                      Детальная аналитика доступна в разделе "Аналитика"
-                    </p>
-                    <Link to="/author/analytics">
-                      <Button variant="outline" className="mt-4">
-                        Перейти к аналитике
-                      </Button>
-                    </Link>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
-          </div>
-
-          {/* Sidebar */}
-          <div className="space-y-4">
-            {/* Quick Stats */}
-            <Card className="bg-gradient-to-br from-[#7C6AF7] to-[#9B8AF9] text-white border-0">
-              <CardContent className="p-5">
-                <h3 className="text-[14px] font-semibold mb-4" style={{ fontFamily: 'var(--font-heading)' }}>
-                  Статистика курса
-                </h3>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] opacity-90" style={{ fontFamily: 'var(--font-body)' }}>Модулей</span>
-                    <span className="text-[16px] font-bold" style={{ fontFamily: 'var(--font-heading)' }}>3</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] opacity-90" style={{ fontFamily: 'var(--font-body)' }}>Уроков</span>
-                    <span className="text-[16px] font-bold" style={{ fontFamily: 'var(--font-heading)' }}>16</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] opacity-90" style={{ fontFamily: 'var(--font-body)' }}>Учеников</span>
-                    <span className="text-[16px] font-bold" style={{ fontFamily: 'var(--font-heading)' }}>342</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] opacity-90" style={{ fontFamily: 'var(--font-body)' }}>Доходимость</span>
-                    <span className="text-[16px] font-bold" style={{ fontFamily: 'var(--font-heading)' }}>68%</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Add Content */}
-            <Card>
-              <CardContent className="p-5">
-                <h3 className="text-[14px] font-semibold text-[#1A1A2E] mb-4" style={{ fontFamily: 'var(--font-heading)' }}>
-                  Добавить контент
-                </h3>
-                <div className="space-y-2">
-                  <Button variant="outline" className="w-full justify-start gap-3" size="sm">
-                    <div className="w-8 h-8 rounded-lg bg-[#FFE5D9] flex items-center justify-center">
-                      <Video className="w-4 h-4 text-[#FF6B6B]" />
-                    </div>
-                    Видео урок
-                  </Button>
-                  <Button variant="outline" className="w-full justify-start gap-3" size="sm">
-                    <div className="w-8 h-8 rounded-lg bg-[#EDE9FF] flex items-center justify-center">
-                      <FileText className="w-4 h-4 text-[#7C6AF7]" />
-                    </div>
-                    Текст
-                  </Button>
-                  <Button variant="outline" className="w-full justify-start gap-3" size="sm">
-                    <div className="w-8 h-8 rounded-lg bg-[#F5E642] flex items-center justify-center">
-                      <CheckSquare className="w-4 h-4 text-[#5A5000]" />
-                    </div>
-                    Тест
-                  </Button>
-                  <Button variant="outline" className="w-full justify-start gap-3" size="sm">
-                    <div className="w-8 h-8 rounded-lg bg-[#C5E8A0] flex items-center justify-center">
-                      <BookOpen className="w-4 h-4 text-[#2D5016]" />
-                    </div>
-                    Домашка
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Tips */}
-            <Card className="bg-[#FFF4DC] border-0">
-              <CardContent className="p-5">
-                <h3 className="text-[13px] font-semibold text-[#1A1A2E] mb-2" style={{ fontFamily: 'var(--font-heading)' }}>
-                  💡 Совет
-                </h3>
-                <p className="text-[11px] text-[#1A1A2E]/70 leading-relaxed" style={{ fontFamily: 'var(--font-body)' }}>
-                  Чередуйте типы контента для лучшего усвоения материала. Рекомендуем добавлять тест после каждых 2-3 уроков.
+        <TabsContent value="content" className="space-y-4">
+          {!courseId ? (
+            <Card className="border-0">
+              <CardContent className="p-12 text-center">
+                <p className="text-[13px] text-[#8A8A9A] mb-4" style={{ fontFamily: 'var(--font-body)' }}>
+                  Сначала сохраните курс (введите название и нажмите "Сохранить")
                 </p>
               </CardContent>
             </Card>
+          ) : (
+            <>
+              {course?.modules.length === 0 ? (
+                <Card className="border-0">
+                  <CardContent className="p-12 text-center">
+                    <BookOpen className="w-12 h-12 text-[#8A8A9A] mx-auto mb-4" strokeWidth={1.5} />
+                    <h3 className="text-[18px] font-semibold text-[#1A1A2E] mb-2" style={{ fontFamily: 'var(--font-heading)' }}>
+                      Нет модулей
+                    </h3>
+                    <p className="text-[13px] text-[#8A8A9A] mb-6" style={{ fontFamily: 'var(--font-body)' }}>
+                      Добавьте первый модуль чтобы начать
+                    </p>
+                    <Button onClick={handleAddModule}>
+                      <Plus className="w-4 h-4 mr-2" />Добавить модуль
+                    </Button>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="space-y-3">
+                  {course?.modules.map((module, mIndex) => {
+                    const expanded = expandedModule === module.id;
+                    return (
+                      <Card key={module.id} className="border-0 overflow-hidden">
+                        <CardContent className="p-0">
+                          <div className="flex items-center gap-3 p-4 hover:bg-[#F5F4F2]/50 transition-colors">
+                            <span className="w-8 h-8 rounded-lg bg-[#EDE9FF] text-[#7C6AF7] text-xs font-semibold flex items-center justify-center" style={{ fontFamily: 'var(--font-heading)' }}>
+                              {mIndex + 1}
+                            </span>
+                            <div className="flex-1">
+                              <h3 className="text-[14px] font-semibold text-[#1A1A2E]" style={{ fontFamily: 'var(--font-heading)' }}>
+                                {module.title}
+                              </h3>
+                              <p className="text-[12px] text-[#8A8A9A]" style={{ fontFamily: 'var(--font-body)' }}>
+                                {module.lessons.length} {module.lessons.length === 1 ? 'урок' : 'уроков'}
+                              </p>
+                            </div>
+                            <Button variant="ghost" size="icon" onClick={() => handleEditModule(module.id, module.title)}>
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => setDeleteModuleId(module.id)}>
+                              <Trash2 className="w-4 h-4 text-[#FF6B6B]" />
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => setExpandedModule(expanded ? null : module.id)}>
+                              {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                            </Button>
+                          </div>
+
+                          {expanded && (
+                            <div className="border-t border-[#1A1A2E]/5 bg-[#F5F4F2]/30">
+                              {module.lessons.map((lesson, lIndex) => {
+                                const Icon = lessonIcons[lesson.type] || FileText;
+                                return (
+                                  <div key={lesson.id} className="flex items-center gap-3 px-4 py-3 hover:bg-white transition-colors border-b border-[#1A1A2E]/5 last:border-0">
+                                    <span className="text-[12px] text-[#8A8A9A] w-6" style={{ fontFamily: 'var(--font-body)' }}>
+                                      {mIndex + 1}.{lIndex + 1}
+                                    </span>
+                                    <div className="w-7 h-7 rounded-lg bg-white flex items-center justify-center">
+                                      <Icon className="w-4 h-4 text-[#7C6AF7]" strokeWidth={1.5} />
+                                    </div>
+                                    <div className="flex-1">
+                                      <p className="text-[13px] font-medium text-[#1A1A2E]" style={{ fontFamily: 'var(--font-body)' }}>
+                                        {lesson.title}
+                                      </p>
+                                      <p className="text-[11px] text-[#8A8A9A]" style={{ fontFamily: 'var(--font-body)' }}>
+                                        {lessonLabels[lesson.type]}
+                                      </p>
+                                    </div>
+                                    <Button variant="ghost" size="icon" onClick={() => handleEditLesson(module.id, lesson)}>
+                                      <Edit className="w-3.5 h-3.5" />
+                                    </Button>
+                                    <Button variant="ghost" size="icon" onClick={() => setDeleteLessonInfo({ moduleId: module.id, lessonId: lesson.id })}>
+                                      <Trash2 className="w-3.5 h-3.5 text-[#FF6B6B]" />
+                                    </Button>
+                                  </div>
+                                );
+                              })}
+                              <div className="p-3">
+                                <Button variant="outline" size="sm" className="w-full" onClick={() => handleAddLesson(module.id)}>
+                                  <Plus className="w-4 h-4 mr-2" />Добавить урок
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                  <Button variant="outline" className="w-full" onClick={handleAddModule}>
+                    <Plus className="w-4 h-4 mr-2" />Добавить модуль
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
+        </TabsContent>
+
+        <TabsContent value="settings">
+          <Card className="border-0">
+            <CardContent className="p-6 space-y-4">
+              <div>
+                <Label htmlFor="title">Название курса</Label>
+                <Input id="title" value={title} onChange={e => setTitle(e.target.value)} placeholder="Например: Основы UI/UX" className="mt-1.5" />
+              </div>
+              <div>
+                <Label htmlFor="description">Описание</Label>
+                <Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} placeholder="Кратко опишите ваш курс" rows={4} className="mt-1.5" />
+              </div>
+              <div>
+                <Label htmlFor="cover">Обложка (URL картинки)</Label>
+                <Input id="cover" value={cover} onChange={e => setCover(e.target.value)} placeholder="https://..." className="mt-1.5" />
+              </div>
+              <div>
+                <Label>Статус</Label>
+                <Select value={status} onValueChange={(v: 'draft' | 'published') => setStatus(v)}>
+                  <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="draft">Черновик</SelectItem>
+                    <SelectItem value="published">Опубликован</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button onClick={handleSaveCourse} className="w-full">
+                <Save className="w-4 h-4 mr-2" />Сохранить настройки
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {/* Module Dialog */}
+      <Dialog open={moduleDialogOpen} onOpenChange={setModuleDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{moduleEditId ? 'Редактировать модуль' : 'Новый модуль'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <Label htmlFor="module-title">Название</Label>
+              <Input id="module-title" value={moduleTitle} onChange={e => setModuleTitle(e.target.value)} placeholder="Например: Введение" autoFocus className="mt-1.5" />
+            </div>
           </div>
-        </div>
-      </main>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setModuleDialogOpen(false)}>Отмена</Button>
+            <Button onClick={submitModule}>{moduleEditId ? 'Сохранить' : 'Добавить'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Lesson Dialog */}
+      <Dialog open={lessonDialogOpen} onOpenChange={setLessonDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{lessonEditId ? 'Редактировать урок' : 'Новый урок'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <Label htmlFor="lesson-title">Название</Label>
+              <Input id="lesson-title" value={lessonTitle} onChange={e => setLessonTitle(e.target.value)} placeholder="Название урока" autoFocus className="mt-1.5" />
+            </div>
+            <div>
+              <Label>Тип урока</Label>
+              <Select value={lessonType} onValueChange={(v: Lesson['type']) => setLessonType(v)}>
+                <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="video">Видео</SelectItem>
+                  <SelectItem value="text">Текст</SelectItem>
+                  <SelectItem value="homework">Домашка</SelectItem>
+                  <SelectItem value="quiz">Тест</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="lesson-content">
+                {lessonType === 'video' ? 'YouTube embed URL' : lessonType === 'text' ? 'HTML контент' : 'Содержимое'}
+              </Label>
+              {lessonType === 'video' ? (
+                <Input id="lesson-content" value={lessonContent} onChange={e => setLessonContent(e.target.value)} placeholder="https://www.youtube.com/embed/..." className="mt-1.5" />
+              ) : (
+                <Textarea id="lesson-content" value={lessonContent} onChange={e => setLessonContent(e.target.value)} rows={6} placeholder={lessonType === 'text' ? '<p>Ваш контент...</p>' : 'Инструкции к заданию'} className="mt-1.5" />
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setLessonDialogOpen(false)}>Отмена</Button>
+            <Button onClick={submitLesson}>{lessonEditId ? 'Сохранить' : 'Добавить'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete confirmations */}
+      <AlertDialog open={deleteCourseOpen} onOpenChange={setDeleteCourseOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Удалить курс?</AlertDialogTitle>
+            <AlertDialogDescription>Это действие нельзя отменить. Все модули, уроки и записи учеников будут удалены.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Отмена</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteCourse} className="bg-[#FF6B6B] hover:bg-[#E55555]">Удалить</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!deleteModuleId} onOpenChange={(o) => !o && setDeleteModuleId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Удалить модуль?</AlertDialogTitle>
+            <AlertDialogDescription>Все уроки модуля будут удалены.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Отмена</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => { if (courseId && deleteModuleId) { deleteModule(courseId, deleteModuleId); toast.success('Модуль удалён'); setDeleteModuleId(null); } }}
+              className="bg-[#FF6B6B] hover:bg-[#E55555]"
+            >Удалить</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!deleteLessonInfo} onOpenChange={(o) => !o && setDeleteLessonInfo(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Удалить урок?</AlertDialogTitle>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Отмена</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => { if (courseId && deleteLessonInfo) { deleteLesson(courseId, deleteLessonInfo.moduleId, deleteLessonInfo.lessonId); toast.success('Урок удалён'); setDeleteLessonInfo(null); } }}
+              className="bg-[#FF6B6B] hover:bg-[#E55555]"
+            >Удалить</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

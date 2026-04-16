@@ -1,426 +1,209 @@
+import { useMemo } from 'react';
 import { Card, CardContent } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import { Progress } from '../../components/ui/progress';
-import { 
-  Trophy,
-  Award,
-  Target,
-  Zap,
-  Star,
-  TrendingUp,
-  Calendar,
-  CheckCircle2,
-  Lock
-} from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { Trophy, Flame, BookOpen, Target, Lock, CheckCircle2, Star, Sparkles, Award } from 'lucide-react';
+import { useDataStore } from '../../store/DataStore';
+import { useAuth } from '../../context/AuthContext';
+import { CountUp } from '../../components/CountUp';
+import { motion } from 'motion/react';
+
+interface Achievement {
+  id: string;
+  title: string;
+  description: string;
+  icon: any;
+  unlocked: boolean;
+  color: string;
+}
 
 export function StudentProgress() {
-  const progressData = [
-    { week: 'Нед 1', progress: 15 },
-    { week: 'Нед 2', progress: 28 },
-    { week: 'Нед 3', progress: 42 },
-    { week: 'Нед 4', progress: 58 },
-    { week: 'Нед 5', progress: 64 },
-    { week: 'Нед 6', progress: 75 }
-  ];
+  const { user } = useAuth();
+  const { courses, enrollments, progress, getCompletedLessonsCount, homework } = useDataStore();
+
+  const completedLessons = user ? getCompletedLessonsCount(user.id) : 0;
+  const level = Math.floor(completedLessons / 5) + 1;
+  const lessonsToNext = 5 - (completedLessons % 5);
+  const xpProgress = ((5 - lessonsToNext) / 5) * 100;
+
+  const myCourses = useMemo(() => {
+    if (!user) return [];
+    const enrolledIds = enrollments[user.id] || [];
+    return courses.filter(c => enrolledIds.includes(c.id));
+  }, [user, courses, enrollments]);
+
+  // Streak
+  const streak = useMemo(() => {
+    if (!user) return 0;
+    const userProgress = progress[user.id] || {};
+    const dates = new Set<string>();
+    for (const p of Object.values(userProgress)) {
+      if (p.lastActivity) dates.add(new Date(p.lastActivity).toISOString().slice(0, 10));
+    }
+    let count = 0;
+    const today = new Date();
+    for (let i = 0; i < 30; i++) {
+      const d = new Date(today);
+      d.setDate(today.getDate() - i);
+      if (dates.has(d.toISOString().slice(0, 10))) count++;
+      else if (i > 0) break;
+    }
+    return count;
+  }, [user, progress]);
+
+  const submittedHw = user ? homework.filter(h => h.studentId === user.id).length : 0;
+  const approvedHw = user ? homework.filter(h => h.studentId === user.id && h.status === 'approved').length : 0;
+
+  // Build achievements
+  const achievements: Achievement[] = useMemo(() => [
+    { id: 'first_lesson', title: 'Первый шаг', description: 'Завершите свой первый урок', icon: Star, unlocked: completedLessons >= 1, color: 'bg-[#F5E642]' },
+    { id: 'five_lessons', title: 'Пятёрка', description: 'Пройдите 5 уроков', icon: BookOpen, unlocked: completedLessons >= 5, color: 'bg-[#B8D8F8]' },
+    { id: 'ten_lessons', title: 'Десятка', description: 'Пройдите 10 уроков', icon: Target, unlocked: completedLessons >= 10, color: 'bg-[#C5E8A0]' },
+    { id: 'first_hw', title: 'Сдача', description: 'Сдайте первое домашнее задание', icon: CheckCircle2, unlocked: submittedHw >= 1, color: 'bg-[#FFE5D9]' },
+    { id: 'approved_hw', title: 'Отличник', description: 'Получите одобренное ДЗ', icon: Sparkles, unlocked: approvedHw >= 1, color: 'bg-[#EDE9FF]' },
+    { id: 'level_3', title: 'Уровень 3', description: 'Достигните 3 уровня', icon: Trophy, unlocked: level >= 3, color: 'bg-[#F9D0E8]' },
+    { id: 'streak_3', title: 'Постоянство', description: '3 дня подряд обучения', icon: Flame, unlocked: streak >= 3, color: 'bg-[#FFE5D9]' },
+    { id: 'streak_7', title: 'Неделя', description: '7 дней подряд обучения', icon: Award, unlocked: streak >= 7, color: 'bg-[#F5E642]' },
+  ], [completedLessons, submittedHw, approvedHw, level, streak]);
+
+  const unlockedCount = achievements.filter(a => a.unlocked).length;
 
   const stats = [
-    {
-      label: 'Текущий уровень',
-      value: '3',
-      subtitle: '750 / 1000 XP',
-      color: 'bg-[#EDE9FF]',
-      textColor: 'text-[#7C6AF7]',
-      icon: Award
-    },
-    {
-      label: 'Стрик',
-      value: '12',
-      subtitle: 'дней подряд',
-      color: 'bg-[#F5E642]',
-      textColor: 'text-[#5A5000]',
-      icon: Zap
-    },
-    {
-      label: 'Завершено',
-      value: '34',
-      subtitle: 'урока',
-      color: 'bg-[#C5E8A0]',
-      textColor: 'text-[#2D5016]',
-      icon: CheckCircle2
-    },
-    {
-      label: 'Достижений',
-      value: '8',
-      subtitle: 'из 25',
-      color: 'bg-[#F9D0E8]',
-      textColor: 'text-[#8B2F5C]',
-      icon: Trophy
-    }
-  ];
-
-  const achievements = [
-    {
-      id: 1,
-      title: 'Первый шаг',
-      description: 'Завершите первый урок',
-      icon: '🎯',
-      unlocked: true,
-      date: '15 апр 2026'
-    },
-    {
-      id: 2,
-      title: 'Неделя обучения',
-      description: '7 дней стрика',
-      icon: '🔥',
-      unlocked: true,
-      date: '22 апр 2026'
-    },
-    {
-      id: 3,
-      title: 'Исследователь',
-      description: 'Завершите 3 курса',
-      icon: '🔍',
-      unlocked: true,
-      date: '28 апр 2026'
-    },
-    {
-      id: 4,
-      title: 'Мастер UI/UX',
-      description: 'Завершите курс "Основы UI/UX"',
-      icon: '🎨',
-      unlocked: true,
-      date: '2 мая 2026'
-    },
-    {
-      id: 5,
-      title: 'Идеальная сдача',
-      description: 'Сдайте домашку на 100%',
-      icon: '💯',
-      unlocked: true,
-      date: '5 мая 2026'
-    },
-    {
-      id: 6,
-      title: 'Активный участник',
-      description: 'Задайте 10 вопросов',
-      icon: '💬',
-      unlocked: true,
-      date: '7 мая 2026'
-    },
-    {
-      id: 7,
-      title: 'Марафонец',
-      description: '30 дней стрика',
-      icon: '🏃',
-      unlocked: true,
-      date: '7 мая 2026'
-    },
-    {
-      id: 8,
-      title: 'Ранняя пташка',
-      description: 'Завершите урок до 9:00',
-      icon: '🌅',
-      unlocked: true,
-      date: '8 мая 2026'
-    },
-    {
-      id: 9,
-      title: 'Профессионал',
-      description: 'Достигните 4 уровня',
-      icon: '⭐',
-      unlocked: false
-    },
-    {
-      id: 10,
-      title: 'Год обучения',
-      description: '365 дней стрика',
-      icon: '🎊',
-      unlocked: false
-    }
-  ];
-
-  const levels = [
-    { level: 1, title: 'Новичок', minXp: 0, maxXp: 100, unlocked: true },
-    { level: 2, title: 'Ученик', minXp: 100, maxXp: 300, unlocked: true },
-    { level: 3, title: 'Практикант', minXp: 300, maxXp: 1000, unlocked: true, current: true },
-    { level: 4, title: 'Специалист', minXp: 1000, maxXp: 2500, unlocked: false },
-    { level: 5, title: 'Эксперт', minXp: 2500, maxXp: 5000, unlocked: false },
-    { level: 6, title: 'Мастер', minXp: 5000, maxXp: 10000, unlocked: false }
-  ];
-
-  const courseProgress = [
-    { course: 'UI/UX Дизайн', progress: 75, lessons: '12/16', color: '#7C6AF7' },
-    { course: 'Figma', progress: 45, lessons: '5/11', color: '#FF6B6B' },
-    { course: 'Веб-дизайн Pro', progress: 30, lessons: '3/10', color: '#F5E642' }
+    { label: 'Уровень', value: level, icon: Trophy, color: 'bg-[#F5E642]', text: 'text-[#5A5000]' },
+    { label: 'Дней подряд', value: streak, icon: Flame, color: 'bg-[#FFE5D9]', text: 'text-[#FF6B6B]' },
+    { label: 'Уроков пройдено', value: completedLessons, icon: BookOpen, color: 'bg-[#C5E8A0]', text: 'text-[#2D5016]' },
+    { label: 'Достижений', value: `${unlockedCount}/${achievements.length}`, icon: Award, color: 'bg-[#EDE9FF]', text: 'text-[#7C6AF7]' },
   ];
 
   return (
-    <div className="min-h-screen bg-[#F5F4F2]">
-      {/* Header */}
-      <header className="bg-white border-b border-[#1A1A2E]/10 px-8 py-5">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-[32px] font-bold text-[#1A1A2E] mb-1" style={{ fontFamily: 'var(--font-heading)' }}>
-              Мой прогресс
-            </h1>
-            <p className="text-[13px] text-[#8A8A9A]" style={{ fontFamily: 'var(--font-body)' }}>
-              Отслеживайте свои достижения и развитие
-            </p>
-          </div>
-        </div>
-      </header>
+    <div className="p-6 max-w-7xl mx-auto">
+      <div className="mb-6">
+        <h1 className="text-[28px] font-bold text-[#1A1A2E]" style={{ fontFamily: 'var(--font-heading)' }}>Мой прогресс</h1>
+        <p className="text-[13px] text-[#8A8A9A]" style={{ fontFamily: 'var(--font-body)' }}>Ваши достижения и статистика обучения</p>
+      </div>
 
-      {/* Main Content */}
-      <main className="p-8 space-y-6">
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {stats.map((stat, index) => (
-            <Card key={index} className={`${stat.color} border-0`}>
+      {/* Level card */}
+      <Card className="bg-gradient-to-br from-[#7C6AF7] to-[#9B8AF9] text-white border-0 mb-6 overflow-hidden relative">
+        <CardContent className="p-6 relative z-10">
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div>
+              <p className="text-[12px] opacity-80 mb-1" style={{ fontFamily: 'var(--font-body)' }}>Текущий уровень</p>
+              <p className="text-[48px] font-bold" style={{ fontFamily: 'var(--font-heading)' }}>
+                <CountUp value={level} />
+              </p>
+              <p className="text-[12px] opacity-80 mt-1" style={{ fontFamily: 'var(--font-body)' }}>
+                {lessonsToNext} {lessonsToNext === 1 ? 'урок' : 'уроков'} до уровня {level + 1}
+              </p>
+            </div>
+            <div className="flex-1 max-w-md">
+              <div className="flex items-center justify-between mb-2 text-[12px]" style={{ fontFamily: 'var(--font-body)' }}>
+                <span>Прогресс уровня</span>
+                <span className="font-bold">{Math.round(xpProgress)}%</span>
+              </div>
+              <div className="w-full bg-white/20 rounded-full h-3">
+                <motion.div
+                  className="bg-white rounded-full h-3"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${xpProgress}%` }}
+                  transition={{ duration: 1, ease: 'easeOut' }}
+                />
+              </div>
+            </div>
+          </div>
+        </CardContent>
+        <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-2xl"></div>
+      </Card>
+
+      {/* Stats */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        {stats.map((s, i) => (
+          <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
+            <Card className={`${s.color} border-0`}>
               <CardContent className="p-5">
-                <div className="flex items-start justify-between mb-3">
-                  <stat.icon className={`w-6 h-6 ${stat.textColor} opacity-70`} strokeWidth={1.5} />
-                </div>
-                <p className={`text-[28px] font-bold ${stat.textColor} mb-1`} style={{ fontFamily: 'var(--font-heading)' }}>
-                  {stat.value}
+                <s.icon className={`w-5 h-5 ${s.text} mb-3`} strokeWidth={1.5} />
+                <p className={`text-[28px] font-bold ${s.text}`} style={{ fontFamily: 'var(--font-heading)' }}>
+                  {typeof s.value === 'number' ? <CountUp value={s.value} /> : s.value}
                 </p>
-                <p className={`text-[11px] font-medium uppercase tracking-wide ${stat.textColor} opacity-70 mb-1`} style={{ fontFamily: 'var(--font-body)' }}>
-                  {stat.label}
-                </p>
-                <p className={`text-[10px] ${stat.textColor} opacity-60`} style={{ fontFamily: 'var(--font-body)' }}>
-                  {stat.subtitle}
-                </p>
+                <p className="text-[11px] text-[#1A1A2E]/60 mt-1" style={{ fontFamily: 'var(--font-body)' }}>{s.label}</p>
               </CardContent>
             </Card>
-          ))}
-        </div>
+          </motion.div>
+        ))}
+      </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Charts & Progress */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Progress Chart */}
-            <Card>
-              <CardContent className="p-6">
-                <h2 className="text-[18px] font-semibold text-[#1A1A2E] mb-6" style={{ fontFamily: 'var(--font-heading)' }}>
-                  Динамика обучения
-                </h2>
-                <ResponsiveContainer width="100%" height={250}>
-                  <LineChart data={progressData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#E5E5E5" />
-                    <XAxis 
-                      dataKey="week" 
-                      stroke="#8A8A9A"
-                      style={{ fontSize: '11px', fontFamily: 'var(--font-body)' }}
-                    />
-                    <YAxis 
-                      stroke="#8A8A9A"
-                      style={{ fontSize: '11px', fontFamily: 'var(--font-body)' }}
-                    />
-                    <Tooltip 
-                      contentStyle={{
-                        backgroundColor: 'white',
-                        border: 'none',
-                        borderRadius: '12px',
-                        boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-                        fontSize: '12px',
-                        fontFamily: 'var(--font-body)'
-                      }}
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="progress" 
-                      stroke="#7C6AF7" 
-                      strokeWidth={3}
-                      dot={{ fill: '#7C6AF7', r: 5 }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-
-            {/* Course Progress */}
-            <Card>
-              <CardContent className="p-6">
-                <h2 className="text-[18px] font-semibold text-[#1A1A2E] mb-6" style={{ fontFamily: 'var(--font-heading)' }}>
-                  Прогресс по курсам
-                </h2>
-                <div className="space-y-4">
-                  {courseProgress.map((course, index) => (
-                    <div key={index}>
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-3">
-                          <div 
-                            className="w-3 h-3 rounded-full" 
-                            style={{ backgroundColor: course.color }}
-                          />
-                          <span className="text-[13px] font-medium text-[#1A1A2E]" style={{ fontFamily: 'var(--font-body)' }}>
-                            {course.course}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <span className="text-[11px] text-[#8A8A9A]" style={{ fontFamily: 'var(--font-body)' }}>
-                            {course.lessons}
-                          </span>
-                          <span className="text-[13px] font-semibold text-[#1A1A2E]" style={{ fontFamily: 'var(--font-body)' }}>
-                            {course.progress}%
-                          </span>
-                        </div>
-                      </div>
-                      <Progress value={course.progress} className="h-2" />
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Achievements */}
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-[18px] font-semibold text-[#1A1A2E]" style={{ fontFamily: 'var(--font-heading)' }}>
-                    Достижения
-                  </h2>
-                  <Badge variant="secondary">8/25</Badge>
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                  {achievements.map((achievement) => (
-                    <div 
-                      key={achievement.id}
-                      className={`p-4 rounded-xl text-center transition-all ${
-                        achievement.unlocked 
-                          ? 'bg-gradient-to-br from-[#EDE9FF] to-[#F9D0E8] hover:shadow-[0_4px_20px_rgba(0,0,0,0.1)]' 
-                          : 'bg-[#F5F4F2] opacity-50'
-                      }`}
-                    >
-                      <div className="relative mb-3">
-                        <div className="text-[36px]">
-                          {achievement.unlocked ? achievement.icon : '🔒'}
-                        </div>
-                        {!achievement.unlocked && (
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <Lock className="w-5 h-5 text-[#8A8A9A]" />
-                          </div>
-                        )}
-                      </div>
-                      <h3 className="text-[11px] font-semibold text-[#1A1A2E] mb-1" style={{ fontFamily: 'var(--font-body)' }}>
-                        {achievement.title}
-                      </h3>
-                      <p className="text-[9px] text-[#8A8A9A] leading-tight" style={{ fontFamily: 'var(--font-body)' }}>
-                        {achievement.description}
-                      </p>
-                      {achievement.unlocked && achievement.date && (
-                        <p className="text-[9px] text-[#7C6AF7] mt-2" style={{ fontFamily: 'var(--font-body)' }}>
-                          {achievement.date}
-                        </p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Level Progress */}
-            <Card className="bg-gradient-to-br from-[#7C6AF7] to-[#9B8AF9] text-white border-0">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-[14px] font-semibold" style={{ fontFamily: 'var(--font-heading)' }}>
-                    Уровень 3
-                  </h3>
-                  <Award className="w-6 h-6" />
-                </div>
-                <p className="text-[11px] opacity-90 mb-4" style={{ fontFamily: 'var(--font-body)' }}>
-                  Практикант
-                </p>
-                <div className="mb-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-[11px] opacity-90" style={{ fontFamily: 'var(--font-body)' }}>До уровня 4</span>
-                    <span className="text-[11px] font-medium" style={{ fontFamily: 'var(--font-body)' }}>250 XP</span>
-                  </div>
-                  <div className="w-full bg-white/20 rounded-full h-2">
-                    <div className="bg-white rounded-full h-2" style={{ width: '75%' }}></div>
-                  </div>
-                </div>
-                <p className="text-[10px] opacity-80" style={{ fontFamily: 'var(--font-body)' }}>
-                  750 / 1000 XP
-                </p>
-              </CardContent>
-            </Card>
-
-            {/* Levels */}
-            <Card>
-              <CardContent className="p-6">
-                <h3 className="text-[16px] font-semibold text-[#1A1A2E] mb-4" style={{ fontFamily: 'var(--font-heading)' }}>
-                  Уровни
-                </h3>
-                <div className="space-y-3">
-                  {levels.map((level) => (
-                    <div 
-                      key={level.level}
-                      className={`flex items-center gap-3 p-3 rounded-xl transition-all ${
-                        level.current 
-                          ? 'bg-gradient-to-r from-[#EDE9FF] to-[#F9D0E8]' 
-                          : level.unlocked 
-                          ? 'bg-[#F5F4F2]' 
-                          : 'bg-white border border-[#1A1A2E]/10 opacity-50'
-                      }`}
-                    >
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                        level.current 
-                          ? 'bg-white' 
-                          : level.unlocked 
-                          ? 'bg-white' 
-                          : 'bg-[#F5F4F2]'
-                      }`}>
-                        {level.unlocked ? (
-                          <Star className={`w-5 h-5 ${level.current ? 'text-[#7C6AF7]' : 'text-[#8A8A9A]'}`} fill={level.current ? '#7C6AF7' : 'none'} />
-                        ) : (
-                          <Lock className="w-5 h-5 text-[#8A8A9A]" />
-                        )}
-                      </div>
-                      <div className="flex-1">
-                        <p className={`text-[13px] font-medium ${level.current ? 'text-[#7C6AF7]' : 'text-[#1A1A2E]'}`} style={{ fontFamily: 'var(--font-body)' }}>
-                          Уровень {level.level}: {level.title}
-                        </p>
-                        <p className="text-[10px] text-[#8A8A9A]" style={{ fontFamily: 'var(--font-body)' }}>
-                          {level.minXp} - {level.maxXp} XP
-                        </p>
-                      </div>
-                      {level.current && (
-                        <Badge variant="default" className="text-[10px]">Текущий</Badge>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Streak Calendar */}
-            <Card className="bg-[#FFF4DC] border-0">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center">
-                    <Zap className="w-5 h-5 text-[#F5E642]" />
-                  </div>
-                  <div>
-                    <h3 className="text-[16px] font-semibold text-[#1A1A2E]" style={{ fontFamily: 'var(--font-heading)' }}>
-                      Стрик 12 дней!
-                    </h3>
-                    <p className="text-[11px] text-[#1A1A2E]/70" style={{ fontFamily: 'var(--font-body)' }}>
-                      Продолжайте в том же духе
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Achievements */}
+        <div>
+          <h2 className="text-[18px] font-bold text-[#1A1A2E] mb-4" style={{ fontFamily: 'var(--font-heading)' }}>Достижения</h2>
+          <div className="grid grid-cols-2 gap-3">
+            {achievements.map((a, i) => (
+              <motion.div
+                key={a.id}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: i * 0.05 }}
+              >
+                <Card className={`${a.unlocked ? a.color : 'bg-white'} border-0 ${a.unlocked ? '' : 'opacity-50'}`}>
+                  <CardContent className="p-4 text-center">
+                    {a.unlocked ? (
+                      <a.icon className="w-8 h-8 text-[#1A1A2E] mx-auto mb-2" strokeWidth={1.5} />
+                    ) : (
+                      <Lock className="w-8 h-8 text-[#8A8A9A] mx-auto mb-2" strokeWidth={1.5} />
+                    )}
+                    <p className="text-[12px] font-semibold text-[#1A1A2E] mb-1" style={{ fontFamily: 'var(--font-heading)' }}>
+                      {a.title}
                     </p>
-                  </div>
-                </div>
-                <p className="text-[11px] text-[#1A1A2E]/70 leading-relaxed" style={{ fontFamily: 'var(--font-body)' }}>
-                  Не пропустите обучение сегодня, чтобы сохранить стрик и получить бонусные XP!
+                    <p className="text-[10px] text-[#1A1A2E]/60" style={{ fontFamily: 'var(--font-body)' }}>
+                      {a.description}
+                    </p>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+
+        {/* Course progress */}
+        <div>
+          <h2 className="text-[18px] font-bold text-[#1A1A2E] mb-4" style={{ fontFamily: 'var(--font-heading)' }}>Прогресс по курсам</h2>
+          {myCourses.length === 0 ? (
+            <Card className="border-0">
+              <CardContent className="p-6 text-center">
+                <p className="text-[13px] text-[#8A8A9A]" style={{ fontFamily: 'var(--font-body)' }}>
+                  Запишитесь на курс, чтобы видеть прогресс
                 </p>
               </CardContent>
             </Card>
-          </div>
+          ) : (
+            <div className="space-y-3">
+              {myCourses.map((c, i) => {
+                const userProgress = progress[user!.id]?.[c.id];
+                const lessonCount = c.modules.reduce((s, m) => s + m.lessons.length, 0);
+                const completed = userProgress?.completedLessons.length || 0;
+                const pct = lessonCount ? Math.round((completed / lessonCount) * 100) : 0;
+                return (
+                  <motion.div key={c.id} initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}>
+                    <Card className="border-0">
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between mb-2 gap-3">
+                          <h3 className="text-[14px] font-semibold text-[#1A1A2E] line-clamp-1" style={{ fontFamily: 'var(--font-heading)' }}>
+                            {c.title}
+                          </h3>
+                          <Badge variant={pct >= 100 ? 'success' : 'secondary'}>{pct}%</Badge>
+                        </div>
+                        <Progress value={pct} className="h-1.5 mb-2" />
+                        <p className="text-[11px] text-[#8A8A9A]" style={{ fontFamily: 'var(--font-body)' }}>
+                          {completed} из {lessonCount} уроков пройдено
+                        </p>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                );
+              })}
+            </div>
+          )}
         </div>
-      </main>
+      </div>
     </div>
   );
 }

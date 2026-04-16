@@ -107,6 +107,23 @@ export interface AnalyticsMetric {
   trend?: 'up' | 'down' | 'stable';
 }
 
+export interface ChatMessage {
+  id: string;
+  fromUserId: string;
+  toUserId: string;
+  content: string;
+  createdAt: string;
+  read: boolean;
+}
+
+export interface ChatThread {
+  withUserId: string;
+  withUserName: string;
+  withUserAvatar?: string;
+  lastMessage?: ChatMessage;
+  unreadCount: number;
+}
+
 export interface AIInsight {
   id: string;
   type: 'content' | 'student' | 'revenue';
