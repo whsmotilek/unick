@@ -9,7 +9,7 @@ import { GraduationCap, BookOpen, Check, Sparkles } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'sonner';
-import logo from '@/assets/d1f4fdcdf2cbedfd13a90150fb918f6e78560c92.png';
+import logoBlackFull from '@/assets/logo/logo-full-black.png';
 
 export function Register() {
   const navigate = useNavigate();
@@ -101,11 +101,8 @@ export function Register() {
         className="w-full max-w-5xl"
       >
         <div className="text-center mb-8">
-          <Link to="/" className="inline-flex items-center gap-2 mb-4">
-            <img src={logo} alt="Unick" className="w-10 h-10" />
-            <span className="font-bold text-2xl text-[#1A1A2E]" style={{ fontFamily: 'var(--font-heading)' }}>
-              unick
-            </span>
+          <Link to="/" className="inline-flex items-center mb-4">
+            <img src={logoBlackFull} alt="Unick" className="h-8" />
           </Link>
           <p className="text-[#8A8A9A] text-[13px]" style={{ fontFamily: 'var(--font-body)' }}>
             Создайте аккаунт за 2 минуты

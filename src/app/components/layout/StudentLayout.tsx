@@ -15,7 +15,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { useAuth } from '../../context/AuthContext';
-import logo from '@/assets/d1f4fdcdf2cbedfd13a90150fb918f6e78560c92.png';
+import logoWhiteFull from '@/assets/logo/logo-full-white.png';
 
 const navigation = [
   { name: 'Главная', href: '/student', icon: LayoutDashboard },
@@ -44,10 +44,7 @@ export function StudentLayout() {
       <aside className="w-[200px] bg-[#1A1A2E] flex flex-col">
         <div className="p-6">
           <Link to="/student" className="flex items-center gap-2">
-            <img src={logo} alt="Unick" className="w-8 h-8" />
-            <span className="text-white font-bold text-lg" style={{ fontFamily: 'var(--font-heading)' }}>
-              unick
-            </span>
+            <img src={logoWhiteFull} alt="Unick" className="h-6" />
           </Link>
         </div>
 

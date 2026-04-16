@@ -16,7 +16,8 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Button } from '../ui/button';
 import { useAuth } from '../../context/AuthContext';
-import logo from '@/assets/d1f4fdcdf2cbedfd13a90150fb918f6e78560c92.png';
+import logoWhiteShort from '@/assets/logo/logo-short-white.png';
+import logoWhiteFull from '@/assets/logo/logo-full-white.png';
 
 const navigation = [
   { name: 'Главная', href: '/author', icon: LayoutDashboard },
@@ -49,10 +50,7 @@ export function AuthorLayout() {
       <aside className="w-[200px] bg-[#1A1A2E] flex flex-col">
         <div className="p-6">
           <Link to="/author" className="flex items-center gap-2">
-            <img src={logo} alt="Unick" className="w-8 h-8" />
-            <span className="text-white font-bold text-lg" style={{ fontFamily: 'var(--font-heading)' }}>
-              unick
-            </span>
+            <img src={logoWhiteFull} alt="Unick" className="h-6" />
           </Link>
         </div>
 

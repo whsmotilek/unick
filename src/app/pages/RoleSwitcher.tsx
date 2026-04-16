@@ -10,7 +10,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { Link } from 'react-router';
-import logo from '@/assets/d1f4fdcdf2cbedfd13a90150fb918f6e78560c92.png';
+import logoBlackFull from '@/assets/logo/logo-full-black.png';
 
 export function RoleSwitcher() {
   const roles = [
@@ -73,7 +73,7 @@ export function RoleSwitcher() {
       <div className="max-w-6xl w-full">
         <div className="text-center mb-12">
           <div className="inline-flex items-center justify-center mb-6">
-            <img src={logo} alt="Unick" className="w-16 h-16" />
+            <img src={logoBlackFull} alt="Unick" className="h-12" />
           </div>
           <h1 className="text-[48px] font-bold text-[#1A1A2E] mb-3" style={{ fontFamily: 'var(--font-heading)' }}>
             Платформа Unick

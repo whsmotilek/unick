@@ -15,7 +15,9 @@ import {
 import { Link } from 'react-router';
 import { motion } from 'motion/react';
 import { useAuth } from '../../context/AuthContext';
-import logo from '@/assets/d1f4fdcdf2cbedfd13a90150fb918f6e78560c92.png';
+import logoWhiteFull from '@/assets/logo/logo-full-white.png';
+import logoWhiteShort from '@/assets/logo/logo-short-white.png';
+import logoBlackFull from '@/assets/logo/logo-full-black.png';
 
 const fadeUp = {
   initial: { opacity: 0, y: 30 },
@@ -57,11 +59,8 @@ export function Landing() {
       <nav className="bg-[#1A1A2E] border-b border-white/10 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
-            <Link to="/" className="flex items-center gap-2">
-              <img src={logo} alt="Unick" className="w-8 h-8" />
-              <span className="text-white font-bold text-xl" style={{ fontFamily: 'var(--font-heading)' }}>
-                unick
-              </span>
+            <Link to="/" className="flex items-center">
+              <img src={logoWhiteFull} alt="Unick" className="h-6" />
             </Link>
             <div className="flex items-center gap-3">
               {isAuthenticated ? (
@@ -318,9 +317,8 @@ export function Landing() {
       <footer className="bg-[#1A1A2E] border-t border-white/10 py-12">
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex flex-col md:flex-row items-center justify-between">
-            <div className="flex items-center gap-2 mb-4 md:mb-0">
-              <img src={logo} alt="Unick" className="w-6 h-6" />
-              <span className="text-white font-bold text-lg" style={{ fontFamily: 'var(--font-heading)' }}>unick</span>
+            <div className="flex items-center mb-4 md:mb-0">
+              <img src={logoWhiteFull} alt="Unick" className="h-5" />
             </div>
             <p className="text-white/50 text-sm" style={{ fontFamily: 'var(--font-body)' }}>
               © 2026 Unick. Все права защищены.
