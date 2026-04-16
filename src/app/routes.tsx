@@ -1,8 +1,8 @@
 import { createBrowserRouter } from 'react-router';
-import { RoleSwitcher } from './pages/RoleSwitcher';
 import { Landing } from './pages/landing/Landing';
 import { Login } from './pages/auth/Login';
 import { Register } from './pages/auth/Register';
+import { ProtectedRoute } from './components/ProtectedRoute';
 import { AuthorLayout } from './components/layout/AuthorLayout';
 import { StudentLayout } from './components/layout/StudentLayout';
 import { AuthorDashboard } from './pages/author/AuthorDashboard';
@@ -18,10 +18,8 @@ import { StudentLesson } from './pages/student/StudentLesson';
 import { StudentHomework } from './pages/student/StudentHomework';
 import { StudentProgress } from './pages/student/StudentProgress';
 import { CuratorDashboard } from './pages/curator/CuratorDashboard';
-import { FeatureShowcase } from './pages/FeatureShowcase';
 import { Calendar } from './pages/Calendar';
 
-// Placeholder компоненты для остальных страниц
 function Placeholder({ title }: { title: string }) {
   return (
     <div className="min-h-screen bg-[#F5F4F2] p-8">
@@ -47,14 +45,6 @@ export const router = createBrowserRouter([
     element: <Landing />
   },
   {
-    path: '/features',
-    element: <FeatureShowcase />
-  },
-  {
-    path: '/role-switcher',
-    element: <RoleSwitcher />
-  },
-  {
     path: '/login',
     element: <Login />
   },
@@ -62,114 +52,70 @@ export const router = createBrowserRouter([
     path: '/register',
     element: <Register />
   },
+  // Author routes
   {
     path: '/author',
-    element: <AuthorLayout />,
+    element: (
+      <ProtectedRoute allowedRoles={['author']}>
+        <AuthorLayout />
+      </ProtectedRoute>
+    ),
     children: [
-      {
-        index: true,
-        element: <AuthorDashboard />
-      },
-      {
-        path: 'courses',
-        element: <AuthorCourses />
-      },
-      {
-        path: 'courses/:id',
-        element: <AuthorCourseBuilder />
-      },
-      {
-        path: 'students',
-        element: <AuthorStudents />
-      },
-      {
-        path: 'analytics',
-        element: <AuthorAnalytics />
-      },
-      {
-        path: 'crm',
-        element: <AuthorCRM />
-      },
-      {
-        path: 'course-universe',
-        element: <CourseUniverse />
-      },
-      {
-        path: 'calendar',
-        element: <Calendar />
-      },
-      {
-        path: 'pages',
-        element: <Placeholder title="Страницы школы" />
-      },
-      {
-        path: 'team',
-        element: <Placeholder title="Команда" />
-      },
-      {
-        path: 'flows',
-        element: <Placeholder title="Потоки и группы" />
-      },
-      {
-        path: 'payments',
-        element: <Placeholder title="Платежи" />
-      },
-      {
-        path: 'content',
-        element: <Placeholder title="Библиотека контента" />
-      }
+      { index: true, element: <AuthorDashboard /> },
+      { path: 'courses', element: <AuthorCourses /> },
+      { path: 'courses/new', element: <AuthorCourseBuilder /> },
+      { path: 'courses/:id', element: <AuthorCourseBuilder /> },
+      { path: 'students', element: <AuthorStudents /> },
+      { path: 'analytics', element: <AuthorAnalytics /> },
+      { path: 'crm', element: <AuthorCRM /> },
+      { path: 'course-universe', element: <CourseUniverse /> },
+      { path: 'calendar', element: <Calendar /> },
+      { path: 'pages', element: <Placeholder title="Страницы школы" /> },
+      { path: 'team', element: <Placeholder title="Команда" /> },
+      { path: 'flows', element: <Placeholder title="Потоки и группы" /> },
+      { path: 'payments', element: <Placeholder title="Платежи" /> },
+      { path: 'content', element: <Placeholder title="Библиотека контента" /> }
     ]
   },
+  // Student routes
   {
     path: '/student',
-    element: <StudentLayout />,
+    element: (
+      <ProtectedRoute allowedRoles={['student']}>
+        <StudentLayout />
+      </ProtectedRoute>
+    ),
     children: [
-      {
-        index: true,
-        element: <StudentDashboard />
-      },
-      {
-        path: 'courses',
-        element: <StudentCourses />
-      },
-      {
-        path: 'courses/:id/lesson/:lessonId',
-        element: <StudentLesson />
-      },
-      {
-        path: 'homework',
-        element: <StudentHomework />
-      },
-      {
-        path: 'progress',
-        element: <StudentProgress />
-      },
-      {
-        path: 'calendar',
-        element: <Calendar />
-      },
-      {
-        path: 'chat',
-        element: <Placeholder title="Чаты" />
-      },
-      {
-        path: 'payments',
-        element: <Placeholder title="Платежи" />
-      },
-      {
-        path: 'profile',
-        element: <Placeholder title="Профиль" />
-      }
+      { index: true, element: <StudentDashboard /> },
+      { path: 'courses', element: <StudentCourses /> },
+      { path: 'courses/:id/lesson/:lessonId', element: <StudentLesson /> },
+      { path: 'homework', element: <StudentHomework /> },
+      { path: 'progress', element: <StudentProgress /> },
+      { path: 'calendar', element: <Calendar /> },
+      { path: 'chat', element: <Placeholder title="Чаты" /> },
+      { path: 'payments', element: <Placeholder title="Платежи" /> },
+      { path: 'profile', element: <Placeholder title="Профиль" /> }
     ]
   },
+  // Curator
   {
     path: '/curator',
-    element: <CuratorDashboard />
+    element: (
+      <ProtectedRoute allowedRoles={['curator']}>
+        <CuratorDashboard />
+      </ProtectedRoute>
+    )
   },
+  // Admin
   {
     path: '/admin',
-    element: <Placeholder title="Личный кабинет администратора" />
+    element: (
+      <ProtectedRoute allowedRoles={['admin']}>
+        <Placeholder title="Личный кабинет администратора" />
+      </ProtectedRoute>
+    )
   },
+  // 404
   {
     path: '*',
     element: (

@@ -1,10 +1,9 @@
-import { Link, Outlet, useLocation } from 'react-router';
-import { 
-  LayoutDashboard, 
-  BookOpen, 
-  Users, 
-  BarChart3, 
-  Settings,
+import { Link, Outlet, useLocation, useNavigate } from 'react-router';
+import {
+  LayoutDashboard,
+  BookOpen,
+  Users,
+  BarChart3,
   Globe,
   Zap,
   CreditCard,
@@ -16,7 +15,7 @@ import {
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Button } from '../ui/button';
-import { mockUsers, mockSchool } from '../../data/mockData';
+import { useAuth } from '../../context/AuthContext';
 import logo from '@/assets/d1f4fdcdf2cbedfd13a90150fb918f6e78560c92.png';
 
 const navigation = [
@@ -36,14 +35,18 @@ const navigation = [
 
 export function AuthorLayout() {
   const location = useLocation();
-  const currentUser = mockUsers.find(u => u.role === 'author');
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const isActive = (path: string) => location.pathname === path;
+
+  const handleLogout = () => {
+    logout();
+    navigate('/');
+  };
 
   return (
     <div className="flex h-screen bg-[#F5F4F2]">
-      {/* Dark Sidebar */}
       <aside className="w-[200px] bg-[#1A1A2E] flex flex-col">
-        {/* Logo */}
         <div className="p-6">
           <Link to="/author" className="flex items-center gap-2">
             <img src={logo} alt="Unick" className="w-8 h-8" />
@@ -53,8 +56,7 @@ export function AuthorLayout() {
           </Link>
         </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 px-4 space-y-1">
+        <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
           {navigation.map((item) => {
             const active = isActive(item.href);
             return (
@@ -63,9 +65,9 @@ export function AuthorLayout() {
                 to={item.href}
                 className={`
                   flex items-center gap-3 px-4 py-2.5 rounded-lg
-                  transition-all text-sm font-medium
-                  ${active 
-                    ? 'bg-white/15 text-white' 
+                  transition-all duration-200 text-sm font-medium
+                  ${active
+                    ? 'bg-white/15 text-white'
                     : 'text-white/50 hover:text-white hover:bg-white/10'
                   }
                 `}
@@ -78,39 +80,36 @@ export function AuthorLayout() {
           })}
         </nav>
 
-        {/* User Profile */}
         <div className="p-4 border-t border-white/10">
           <div className="flex items-center gap-3 mb-3">
             <Avatar className="w-9 h-9">
-              <AvatarImage src={currentUser?.avatar} />
+              <AvatarImage src={user?.avatar} />
               <AvatarFallback className="bg-[#7C6AF7] text-white text-xs">
-                {currentUser?.name.charAt(0)}
+                {user?.name?.charAt(0) || 'U'}
               </AvatarFallback>
             </Avatar>
             <div className="flex-1 min-w-0">
               <p className="text-white text-xs font-medium truncate" style={{ fontFamily: 'var(--font-body)' }}>
-                {currentUser?.name}
+                {user?.name || 'Пользователь'}
               </p>
               <p className="text-white/50 text-[11px] truncate" style={{ fontFamily: 'var(--font-body)' }}>
-                {mockSchool.name}
+                {user?.email}
               </p>
             </div>
           </div>
-          
-          <Link to="/" className="w-full">
-            <Button 
-              variant="ghost" 
-              size="sm"
-              className="w-full justify-start gap-2 text-white/50 hover:text-white hover:bg-white/10 h-8"
-            >
-              <LogOut className="w-4 h-4" />
-              <span className="text-xs">Выйти</span>
-            </Button>
-          </Link>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleLogout}
+            className="w-full justify-start gap-2 text-white/50 hover:text-white hover:bg-white/10 h-8"
+          >
+            <LogOut className="w-4 h-4" />
+            <span className="text-xs">Выйти</span>
+          </Button>
         </div>
       </aside>
 
-      {/* Main Content */}
       <main className="flex-1 overflow-y-auto">
         <Outlet />
       </main>

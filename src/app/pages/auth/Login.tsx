@@ -6,28 +6,69 @@ import { Card, CardContent } from '../../components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { Link, useNavigate } from 'react-router';
 import { GraduationCap, BookOpen } from 'lucide-react';
+import { motion } from 'motion/react';
+import { useAuth } from '../../context/AuthContext';
+import { toast } from 'sonner';
 import logo from '@/assets/d1f4fdcdf2cbedfd13a90150fb918f6e78560c92.png';
 
 export function Login() {
   const navigate = useNavigate();
-  const [studentEmail, setStudentEmail] = useState('');
-  const [studentPassword, setStudentPassword] = useState('');
-  const [authorEmail, setAuthorEmail] = useState('');
-  const [authorPassword, setAuthorPassword] = useState('');
+  const { login, isAuthenticated, user } = useAuth();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [activeTab, setActiveTab] = useState('student');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleStudentLogin = (e: React.FormEvent) => {
+  // If already authenticated, redirect
+  if (isAuthenticated && user) {
+    const redirectMap: Record<string, string> = {
+      author: '/author',
+      student: '/student',
+      curator: '/curator',
+      admin: '/admin',
+    };
+    navigate(redirectMap[user.role] || '/');
+    return null;
+  }
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    navigate('/student');
+    if (!email.trim()) {
+      toast.error('Введите email');
+      return;
+    }
+    if (!password.trim()) {
+      toast.error('Введите пароль');
+      return;
+    }
+
+    setIsLoading(true);
+    // Simulate network delay
+    await new Promise(r => setTimeout(r, 400));
+
+    const result = login(email, password);
+    setIsLoading(false);
+
+    if (result.success) {
+      toast.success('Добро пожаловать!');
+    } else {
+      toast.error(result.error || 'Ошибка входа');
+    }
   };
 
-  const handleAuthorLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    navigate('/author');
+  const demoLogin = (demoEmail: string) => {
+    setEmail(demoEmail);
+    setPassword('demo');
   };
 
   return (
     <div className="min-h-screen bg-[#F5F4F2] flex items-center justify-center p-6">
-      <div className="w-full max-w-md">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: 'easeOut' }}
+        className="w-full max-w-md"
+      >
         {/* Logo */}
         <div className="text-center mb-8">
           <Link to="/" className="inline-flex items-center gap-2 mb-4">
@@ -43,18 +84,18 @@ export function Login() {
 
         <Card className="border-0 shadow-[0_8px_30px_rgba(0,0,0,0.08)]">
           <CardContent className="p-8">
-            <Tabs defaultValue="student" className="w-full">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <TabsList className="grid w-full grid-cols-2 mb-6 bg-[#F5F4F2] p-1 rounded-xl">
-                <TabsTrigger 
+                <TabsTrigger
                   value="student"
-                  className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm"
+                  className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all"
                 >
                   <GraduationCap className="w-4 h-4 mr-2" />
                   Ученик
                 </TabsTrigger>
-                <TabsTrigger 
+                <TabsTrigger
                   value="author"
-                  className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm"
+                  className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all"
                 >
                   <BookOpen className="w-4 h-4 mr-2" />
                   Автор
@@ -62,15 +103,15 @@ export function Login() {
               </TabsList>
 
               <TabsContent value="student">
-                <form onSubmit={handleStudentLogin} className="space-y-4">
+                <form onSubmit={handleLogin} className="space-y-4">
                   <div>
                     <Label htmlFor="student-email" className="text-[#1A1A2E]">Email</Label>
                     <Input
                       id="student-email"
                       type="email"
                       placeholder="your@email.com"
-                      value={studentEmail}
-                      onChange={(e) => setStudentEmail(e.target.value)}
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
                       required
                       className="mt-1.5 h-11 rounded-xl border-[#1A1A2E]/10"
                     />
@@ -81,39 +122,36 @@ export function Login() {
                       id="student-password"
                       type="password"
                       placeholder="••••••••"
-                      value={studentPassword}
-                      onChange={(e) => setStudentPassword(e.target.value)}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
                       required
                       className="mt-1.5 h-11 rounded-xl border-[#1A1A2E]/10"
                     />
                   </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <label className="flex items-center gap-2">
-                      <input type="checkbox" className="rounded w-4 h-4" />
-                      <span className="text-[#8A8A9A]" style={{ fontFamily: 'var(--font-body)' }}>
-                        Запомнить меня
-                      </span>
-                    </label>
-                    <a href="#" className="text-[#7C6AF7] hover:underline" style={{ fontFamily: 'var(--font-body)' }}>
-                      Забыли пароль?
-                    </a>
-                  </div>
-                  <Button type="submit" className="w-full h-11" size="lg">
-                    Войти как ученик
+                  <Button type="submit" className="w-full h-11 transition-transform active:scale-[0.98]" size="lg" disabled={isLoading}>
+                    {isLoading ? 'Вход...' : 'Войти как ученик'}
                   </Button>
+                  <button
+                    type="button"
+                    onClick={() => demoLogin('petr@example.com')}
+                    className="w-full text-center text-xs text-[#7C6AF7] hover:underline cursor-pointer"
+                    style={{ fontFamily: 'var(--font-body)' }}
+                  >
+                    Демо-вход (petr@example.com)
+                  </button>
                 </form>
               </TabsContent>
 
               <TabsContent value="author">
-                <form onSubmit={handleAuthorLogin} className="space-y-4">
+                <form onSubmit={handleLogin} className="space-y-4">
                   <div>
                     <Label htmlFor="author-email" className="text-[#1A1A2E]">Email</Label>
                     <Input
                       id="author-email"
                       type="email"
                       placeholder="your@email.com"
-                      value={authorEmail}
-                      onChange={(e) => setAuthorEmail(e.target.value)}
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
                       required
                       className="mt-1.5 h-11 rounded-xl border-[#1A1A2E]/10"
                     />
@@ -124,26 +162,23 @@ export function Login() {
                       id="author-password"
                       type="password"
                       placeholder="••••••••"
-                      value={authorPassword}
-                      onChange={(e) => setAuthorPassword(e.target.value)}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
                       required
                       className="mt-1.5 h-11 rounded-xl border-[#1A1A2E]/10"
                     />
                   </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <label className="flex items-center gap-2">
-                      <input type="checkbox" className="rounded w-4 h-4" />
-                      <span className="text-[#8A8A9A]" style={{ fontFamily: 'var(--font-body)' }}>
-                        Запомнить меня
-                      </span>
-                    </label>
-                    <a href="#" className="text-[#7C6AF7] hover:underline" style={{ fontFamily: 'var(--font-body)' }}>
-                      Забыли пароль?
-                    </a>
-                  </div>
-                  <Button type="submit" className="w-full h-11" size="lg">
-                    Войти как автор
+                  <Button type="submit" className="w-full h-11 transition-transform active:scale-[0.98]" size="lg" disabled={isLoading}>
+                    {isLoading ? 'Вход...' : 'Войти как автор'}
                   </Button>
+                  <button
+                    type="button"
+                    onClick={() => demoLogin('anna@example.com')}
+                    className="w-full text-center text-xs text-[#7C6AF7] hover:underline cursor-pointer"
+                    style={{ fontFamily: 'var(--font-body)' }}
+                  >
+                    Демо-вход (anna@example.com)
+                  </button>
                 </form>
               </TabsContent>
             </Tabs>
@@ -158,11 +193,11 @@ export function Login() {
         </Card>
 
         <div className="mt-6 text-center">
-          <Link to="/" className="text-sm text-[#8A8A9A] hover:text-[#1A1A2E]" style={{ fontFamily: 'var(--font-body)' }}>
+          <Link to="/" className="text-sm text-[#8A8A9A] hover:text-[#1A1A2E] transition-colors" style={{ fontFamily: 'var(--font-body)' }}>
             ← Вернуться на главную
           </Link>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }
