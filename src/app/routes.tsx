@@ -6,31 +6,35 @@ import { Register } from './pages/auth/Register';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AuthorLayout } from './components/layout/AuthorLayout';
 import { StudentLayout } from './components/layout/StudentLayout';
-import { PageSkeleton, DashboardSkeleton, CourseListSkeleton } from './components/skeletons/PageSkeleton';
+import { PageSkeleton } from './components/skeletons/PageSkeleton';
 
-// Author pages — eager load main pages
+// Author pages — eager (small, frequently navigated)
 import { AuthorDashboard } from './pages/author/AuthorDashboard';
 import { AuthorCourses } from './pages/author/AuthorCourses';
 import { AuthorCourseBuilder } from './pages/author/AuthorCourseBuilder';
-// Heavy/secondary pages — lazy load
-const AuthorStudents = lazy(() => import('./pages/author/AuthorStudents').then(m => ({ default: m.AuthorStudents })));
-const AuthorAnalytics = lazy(() => import('./pages/author/AuthorAnalytics').then(m => ({ default: m.AuthorAnalytics })));
-const AuthorCRM = lazy(() => import('./pages/author/AuthorCRM').then(m => ({ default: m.AuthorCRM })));
-const CourseUniverse = lazy(() => import('./pages/author/CourseUniverse').then(m => ({ default: m.CourseUniverse })));
-const AuthorHomeworkReview = lazy(() => import('./pages/author/AuthorHomeworkReview').then(m => ({ default: m.AuthorHomeworkReview })));
+import { AuthorStudents } from './pages/author/AuthorStudents';
+import { AuthorAnalytics } from './pages/author/AuthorAnalytics';
+import { AuthorCRM } from './pages/author/AuthorCRM';
+import { AuthorHomeworkReview } from './pages/author/AuthorHomeworkReview';
 
 // Student pages — eager
 import { StudentDashboard } from './pages/student/StudentDashboard';
 import { StudentCourses } from './pages/student/StudentCourses';
 import { StudentLesson } from './pages/student/StudentLesson';
-const StudentCatalog = lazy(() => import('./pages/student/StudentCatalog').then(m => ({ default: m.StudentCatalog })));
-const StudentHomework = lazy(() => import('./pages/student/StudentHomework').then(m => ({ default: m.StudentHomework })));
-const StudentProgress = lazy(() => import('./pages/student/StudentProgress').then(m => ({ default: m.StudentProgress })));
+import { StudentCatalog } from './pages/student/StudentCatalog';
+import { StudentHomework } from './pages/student/StudentHomework';
+import { StudentProgress } from './pages/student/StudentProgress';
+import { ProfilePage } from './pages/profile/ProfilePage';
 
-// Other
-const CuratorDashboard = lazy(() => import('./pages/curator/CuratorDashboard').then(m => ({ default: m.CuratorDashboard })));
+// Chat — eager (used by both roles)
+import { ChatPage } from './pages/chat/ChatPage';
+
+// Curator
+import { CuratorDashboard } from './pages/curator/CuratorDashboard';
+
+// Heavy/rare — lazy load
+const CourseUniverse = lazy(() => import('./pages/author/CourseUniverse').then(m => ({ default: m.CourseUniverse })));
 const Calendar = lazy(() => import('./pages/Calendar').then(m => ({ default: m.Calendar })));
-const ChatPage = lazy(() => import('./pages/chat/ChatPage').then(m => ({ default: m.ChatPage })));
 
 function Placeholder({ title }: { title: string }) {
   return (
@@ -49,8 +53,8 @@ function Placeholder({ title }: { title: string }) {
   );
 }
 
-const Lazy = ({ children, fallback }: { children: React.ReactNode; fallback?: React.ReactNode }) => (
-  <Suspense fallback={fallback || <PageSkeleton />}>{children}</Suspense>
+const Lazy = ({ children }: { children: React.ReactNode }) => (
+  <Suspense fallback={<PageSkeleton />}>{children}</Suspense>
 );
 
 const basename = import.meta.env.BASE_URL.replace(/\/$/, '');
@@ -69,12 +73,13 @@ export const router = createBrowserRouter([
       { path: 'courses', element: <AuthorCourses /> },
       { path: 'courses/new', element: <AuthorCourseBuilder /> },
       { path: 'courses/:id', element: <AuthorCourseBuilder /> },
-      { path: 'students', element: <Lazy fallback={<DashboardSkeleton />}><AuthorStudents /></Lazy> },
-      { path: 'homework', element: <Lazy><AuthorHomeworkReview /></Lazy> },
-      { path: 'analytics', element: <Lazy fallback={<DashboardSkeleton />}><AuthorAnalytics /></Lazy> },
-      { path: 'crm', element: <Lazy fallback={<DashboardSkeleton />}><AuthorCRM /></Lazy> },
+      { path: 'students', element: <AuthorStudents /> },
+      { path: 'homework', element: <AuthorHomeworkReview /> },
+      { path: 'analytics', element: <AuthorAnalytics /> },
+      { path: 'crm', element: <AuthorCRM /> },
+      { path: 'chat', element: <ChatPage /> },
+      { path: 'profile', element: <ProfilePage /> },
       { path: 'course-universe', element: <Lazy><CourseUniverse /></Lazy> },
-      { path: 'chat', element: <Lazy><ChatPage /></Lazy> },
       { path: 'calendar', element: <Lazy><Calendar /></Lazy> },
       { path: 'pages', element: <Placeholder title="Страницы школы" /> },
       { path: 'team', element: <Placeholder title="Команда" /> },
@@ -90,22 +95,22 @@ export const router = createBrowserRouter([
     element: <ProtectedRoute allowedRoles={['student']}><StudentLayout /></ProtectedRoute>,
     children: [
       { index: true, element: <StudentDashboard /> },
-      { path: 'catalog', element: <Lazy fallback={<CourseListSkeleton />}><StudentCatalog /></Lazy> },
+      { path: 'catalog', element: <StudentCatalog /> },
       { path: 'courses', element: <StudentCourses /> },
       { path: 'courses/:id/lesson/:lessonId', element: <StudentLesson /> },
-      { path: 'homework', element: <Lazy><StudentHomework /></Lazy> },
-      { path: 'progress', element: <Lazy fallback={<DashboardSkeleton />}><StudentProgress /></Lazy> },
-      { path: 'chat', element: <Lazy><ChatPage /></Lazy> },
+      { path: 'homework', element: <StudentHomework /> },
+      { path: 'progress', element: <StudentProgress /> },
+      { path: 'chat', element: <ChatPage /> },
+      { path: 'profile', element: <ProfilePage /> },
       { path: 'calendar', element: <Lazy><Calendar /></Lazy> },
       { path: 'payments', element: <Placeholder title="Платежи" /> },
-      { path: 'profile', element: <Placeholder title="Профиль" /> },
     ],
   },
 
   // Curator
   {
     path: '/curator',
-    element: <ProtectedRoute allowedRoles={['curator']}><Lazy fallback={<DashboardSkeleton />}><CuratorDashboard /></Lazy></ProtectedRoute>,
+    element: <ProtectedRoute allowedRoles={['curator']}><CuratorDashboard /></ProtectedRoute>,
   },
 
   // Admin

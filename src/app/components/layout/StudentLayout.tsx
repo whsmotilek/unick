@@ -18,7 +18,7 @@ import { Badge } from '../ui/badge';
 import { useAuth } from '../../context/AuthContext';
 import { useDataStore } from '../../store/DataStore';
 import { MobileNav } from '../MobileNav';
-import { AnimatePresence, motion } from 'motion/react';
+import { motion } from 'motion/react';
 import logoWhiteFull from '@/assets/logo/logo-full-white.png';
 
 const navigation = [
@@ -143,17 +143,14 @@ export function StudentLayout() {
       </aside>
 
       <main className="flex-1 overflow-y-auto">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={location.pathname}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -4 }}
-            transition={{ duration: 0.2 }}
-          >
-            <Outlet />
-          </motion.div>
-        </AnimatePresence>
+        <motion.div
+          key={location.pathname}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.15 }}
+        >
+          <Outlet />
+        </motion.div>
       </main>
     </div>
   );
