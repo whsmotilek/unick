@@ -1,5 +1,7 @@
 import { useEffect, useState, useCallback, FormEvent } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useWaitlist } from '../context/WaitlistContext';
+import { submitToWaitlistSheet } from '../lib/waitlistApi';
 import {
   Dialog,
   DialogContent,
@@ -10,7 +12,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
 import { Label } from './ui/label';
-import { Sparkles, Check } from 'lucide-react';
+import { Sparkles, Check, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 const SUBMITTED_KEY = 'unick_waitlist_submitted';
@@ -41,16 +43,17 @@ function isValidEmail(value: string) {
 
 export function WaitlistPopup() {
   const { isAuthenticated } = useAuth();
+  const { isOpen, open, close } = useWaitlist();
   const [submitted, setSubmitted] = useState(() => localStorage.getItem(SUBMITTED_KEY) === '1');
   const [shownThisSession, setShownThisSession] = useState(
     () => sessionStorage.getItem(SESSION_SHOWN_KEY) === '1'
   );
-  const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [project, setProject] = useState('');
   const [errors, setErrors] = useState<{ name?: string; email?: string; project?: string }>({});
   const [justSubmitted, setJustSubmitted] = useState(false);
+  const [sending, setSending] = useState(false);
 
   // Авто-открытие через минуту, если ещё не показывали в этой сессии
   useEffect(() => {
@@ -58,13 +61,13 @@ export function WaitlistPopup() {
     const timer = window.setTimeout(() => {
       sessionStorage.setItem(SESSION_SHOWN_KEY, '1');
       setShownThisSession(true);
-      setOpen(true);
+      open();
     }, POPUP_DELAY_MS);
     return () => window.clearTimeout(timer);
-  }, [isAuthenticated, submitted, shownThisSession]);
+  }, [isAuthenticated, submitted, shownThisSession, open]);
 
   const handleSubmit = useCallback(
-    (e: FormEvent) => {
+    async (e: FormEvent) => {
       e.preventDefault();
       const nextErrors: typeof errors = {};
       if (!name.trim()) nextErrors.name = 'Укажите имя';
@@ -81,31 +84,56 @@ export function WaitlistPopup() {
         projectDescription: project.trim(),
         submittedAt: new Date().toISOString(),
       };
+
+      setSending(true);
+      // Резервная копия в localStorage всегда — даже если Google недоступен
       try {
         localStorage.setItem(ENTRIES_KEY, JSON.stringify([...loadEntries(), entry]));
         localStorage.setItem(SUBMITTED_KEY, '1');
       } catch {
-        toast.error('Не удалось сохранить заявку, попробуйте ещё раз');
-        return;
+        // ignore quota errors — не блокируем сабмит
       }
+
+      const sentToSheet = await submitToWaitlistSheet({
+        name: entry.name,
+        email: entry.email,
+        projectDescription: entry.projectDescription,
+        submittedAt: entry.submittedAt,
+      });
+      setSending(false);
+
+      if (sentToSheet) {
+        toast.success('Готово! Мы свяжемся с вами, как только откроем доступ');
+      } else {
+        toast.success('Заявка принята! Мы свяжемся с вами в ближайшее время');
+      }
+
       setJustSubmitted(true);
-      toast.success('Готово! Мы свяжемся с вами, как только откроем доступ');
       window.setTimeout(() => {
         setSubmitted(true);
-        setOpen(false);
+        close();
       }, 1800);
     },
-    [name, email, project]
+    [name, email, project, close]
   );
 
-  if (isAuthenticated || submitted) return null;
+  if (isAuthenticated) return null;
+
+  const handleOpenChange = (next: boolean) => {
+    if (next) open();
+    else close();
+  };
+
+  // Поведение sticky-плашки:
+  // — Если уже отправили: не показываем (форма на лендинге всё равно открывает попап с success state).
+  // — Если попап ещё не открывался в этой сессии: не показываем (не отвлекаем сразу).
+  // — Если попап уже был и закрыт: показываем как напоминание.
+  const showSticky = !submitted && shownThisSession && !isOpen;
 
   return (
     <>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent
-          className="max-w-md p-0 overflow-hidden border-0 rounded-[24px] bg-[#F5F4F2] sm:max-w-md"
-        >
+      <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+        <DialogContent className="max-w-md p-0 overflow-hidden border-0 rounded-[24px] bg-[#F5F4F2] sm:max-w-md">
           <div className="bg-gradient-to-br from-[#7C6AF7] to-[#9B8AF9] p-6 text-white relative overflow-hidden">
             <div
               className="inline-flex items-center gap-1.5 bg-white/20 rounded-full px-3 py-1 mb-3"
@@ -118,19 +146,20 @@ export function WaitlistPopup() {
               className="text-[24px] font-bold leading-tight mb-2"
               style={{ fontFamily: 'var(--font-heading)' }}
             >
-              Запишитесь в waitlist
+              {submitted ? 'Вы уже в списке' : 'Запишитесь в waitlist'}
             </DialogTitle>
             <DialogDescription
               className="text-white/85 text-[13px] leading-relaxed"
               style={{ fontFamily: 'var(--font-body)' }}
             >
-              Получите ранний доступ к Unick и расскажите про свой проект — поможем
-              стартовать в первой волне.
+              {submitted
+                ? 'Спасибо! Мы свяжемся с вами, как только откроем доступ.'
+                : 'Получите ранний доступ к Unick и расскажите про свой проект — поможем стартовать в первой волне.'}
             </DialogDescription>
             <div className="absolute -top-8 -right-8 w-32 h-32 bg-white/10 rounded-full blur-2xl pointer-events-none" />
           </div>
 
-          {justSubmitted ? (
+          {submitted || justSubmitted ? (
             <div className="p-8 text-center">
               <div className="w-14 h-14 rounded-full bg-[#C5E8A0] flex items-center justify-center mx-auto mb-4">
                 <Check className="w-7 h-7 text-[#2D5016]" strokeWidth={2.5} />
@@ -145,7 +174,7 @@ export function WaitlistPopup() {
                 className="text-[13px] text-[#8A8A9A]"
                 style={{ fontFamily: 'var(--font-body)' }}
               >
-                Напишем на {email}, как только откроем доступ.
+                Мы свяжемся с вами, как только откроем доступ.
               </p>
             </div>
           ) : (
@@ -165,6 +194,7 @@ export function WaitlistPopup() {
                   placeholder="Ваше имя"
                   className="h-11 bg-white border-[#E5E5E0]"
                   aria-invalid={!!errors.name || undefined}
+                  disabled={sending}
                 />
                 {errors.name && (
                   <p
@@ -192,6 +222,7 @@ export function WaitlistPopup() {
                   placeholder="you@school.com"
                   className="h-11 bg-white border-[#E5E5E0]"
                   aria-invalid={!!errors.email || undefined}
+                  disabled={sending}
                 />
                 {errors.email && (
                   <p
@@ -219,6 +250,7 @@ export function WaitlistPopup() {
                   rows={4}
                   className="bg-white border-[#E5E5E0] rounded-xl text-sm"
                   aria-invalid={!!errors.project || undefined}
+                  disabled={sending}
                 />
                 {errors.project && (
                   <p
@@ -232,10 +264,18 @@ export function WaitlistPopup() {
 
               <Button
                 type="submit"
-                className="w-full h-11 rounded-xl bg-[#1A1A2E] hover:bg-[#2A2A3E] text-white font-medium transition-transform active:scale-[0.98]"
+                disabled={sending}
+                className="w-full h-11 rounded-xl bg-[#1A1A2E] hover:bg-[#2A2A3E] text-white font-medium transition-transform active:scale-[0.98] disabled:opacity-70"
                 style={{ fontFamily: 'var(--font-body)' }}
               >
-                Записаться
+                {sending ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Отправляем...
+                  </span>
+                ) : (
+                  'Записаться'
+                )}
               </Button>
               <p
                 className="text-[11px] text-[#8A8A9A] text-center"
@@ -248,10 +288,10 @@ export function WaitlistPopup() {
         </DialogContent>
       </Dialog>
 
-      {shownThisSession && !open && (
+      {showSticky && (
         <button
           type="button"
-          onClick={() => setOpen(true)}
+          onClick={open}
           className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 px-5 py-3 rounded-[16px] bg-[#1A1A2E] text-white shadow-[0_8px_30px_rgba(26,26,46,0.35)] hover:shadow-[0_12px_40px_rgba(26,26,46,0.45)] transition-shadow active:scale-[0.98]"
           style={{ fontFamily: 'var(--font-body)' }}
           aria-label="Записаться в waitlist"

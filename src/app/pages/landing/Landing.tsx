@@ -15,6 +15,7 @@ import {
 import { Link } from 'react-router';
 import { motion } from 'motion/react';
 import { useAuth } from '../../context/AuthContext';
+import { useWaitlist } from '../../context/WaitlistContext';
 import logoWhiteFull from '@/assets/logo/logo-full-white.png';
 import logoWhiteShort from '@/assets/logo/logo-short-white.png';
 import logoBlackFull from '@/assets/logo/logo-full-black.png';
@@ -27,6 +28,7 @@ const fadeUp = {
 
 export function Landing() {
   const { isAuthenticated, user } = useAuth();
+  const { open: openWaitlist } = useWaitlist();
 
   const features = [
     { icon: Sparkles, title: 'AI-Аналитика', description: 'Умная система анализирует обучение и подсказывает, как улучшить курсы', color: 'bg-[#EDE9FF]', iconColor: 'text-[#7C6AF7]' },
@@ -136,6 +138,14 @@ export function Landing() {
                   Демо-вход
                 </Button>
               </Link>
+              <Button
+                size="lg"
+                onClick={openWaitlist}
+                className="text-base px-8 bg-gradient-to-br from-[#7C6AF7] to-[#9B8AF9] text-white hover:from-[#6B59E5] hover:to-[#8A79E7] shadow-[0_8px_24px_rgba(124,106,247,0.35)] hover:shadow-[0_12px_30px_rgba(124,106,247,0.45)] transition-all hover:scale-[1.02] active:scale-[0.98]"
+              >
+                <Sparkles className="w-5 h-5 mr-2" />
+                Предзапись
+              </Button>
             </motion.div>
 
             <motion.div
