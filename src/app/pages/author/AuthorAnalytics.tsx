@@ -15,7 +15,7 @@ export function AuthorAnalytics() {
   const { user } = useAuth();
   const { courses, enrollments, progress, homework, getCourseProgress } = useDataStore();
 
-  const myCourses = useMemo(() => courses.filter(c => c.schoolId === (user?.schoolId || 'school-1')), [courses, user]);
+  const myCourses = useMemo(() => courses.filter(c => c.schoolId === user?.schoolId), [courses, user]);
 
   // Course distribution by students
   const courseDistribution = useMemo(() => {

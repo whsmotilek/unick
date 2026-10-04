@@ -3,7 +3,7 @@ import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { Input } from '../../components/ui/input';
-import { Search, BookOpen, Users, CheckCircle2, ArrowRight } from 'lucide-react';
+import { Search, BookOpen, CheckCircle2, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { useDataStore } from '../../store/DataStore';
 import { useAuth } from '../../context/AuthContext';
@@ -13,7 +13,8 @@ import { toast } from 'sonner';
 
 export function StudentCatalog() {
   const { user } = useAuth();
-  const { courses, enrollments, enrollStudent } = useDataStore();
+  const { courses, enrollments, enrollFree } = useDataStore();
+  const [busyId, setBusyId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
 
@@ -29,11 +30,18 @@ export function StudentCatalog() {
     return published.filter(c => c.title.toLowerCase().includes(q) || c.description.toLowerCase().includes(q));
   }, [published, searchQuery]);
 
-  const handleEnroll = (courseId: string) => {
+  const handleEnroll = async (courseId: string) => {
     if (!user) return;
-    enrollStudent(user.id, courseId);
-    toast.success('Вы записаны на курс!');
-    navigate('/student/courses');
+    setBusyId(courseId);
+    try {
+      await enrollFree(courseId);
+      toast.success('Вы записаны на курс!');
+      navigate(`/student/courses/${courseId}`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Не удалось записаться');
+    } finally {
+      setBusyId(null);
+    }
   };
 
   return (
@@ -65,8 +73,8 @@ export function StudentCatalog() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filtered.map((course, i) => {
             const isEnrolled = enrolledIds.includes(course.id);
-            const lessonCount = course.modules.reduce((s, m) => s + m.lessons.length, 0);
-            const studentCount = Object.values(enrollments).filter(cids => cids.includes(course.id)).length;
+            // До записи уроки не видны (права доступа), поэтому показываем число модулей
+            const moduleCount = course.modules.length;
             return (
               <motion.div
                 key={course.id}
@@ -92,17 +100,21 @@ export function StudentCatalog() {
                       {course.description}
                     </p>
                     <div className="flex items-center justify-between text-[12px] text-[#8A8A9A] mb-3" style={{ fontFamily: 'var(--font-body)' }}>
-                      <span className="flex items-center gap-1"><BookOpen className="w-3.5 h-3.5" />{lessonCount} уроков</span>
-                      <span className="flex items-center gap-1"><Users className="w-3.5 h-3.5" />{studentCount}</span>
+                      <span className="flex items-center gap-1"><BookOpen className="w-3.5 h-3.5" />{moduleCount} {moduleCount === 1 ? 'модуль' : moduleCount >= 2 && moduleCount <= 4 ? 'модуля' : 'модулей'}</span>
+                      {course.accessType === 'paid' && course.price ? <span className="font-semibold text-[#1A1A2E]">{course.price.toLocaleString('ru-RU')} ₽</span> : null}
                     </div>
                     {isEnrolled ? (
-                      <Badge variant="success" className="w-full justify-center py-2">
-                        <CheckCircle2 className="w-3.5 h-3.5 mr-1" />Вы уже записаны
-                      </Badge>
-                    ) : (
-                      <Button onClick={() => handleEnroll(course.id)} className="w-full transition-transform active:scale-[0.98]">
-                        Записаться<ArrowRight className="w-4 h-4 ml-2" />
+                      <Button variant="outline" onClick={() => navigate(`/student/courses/${course.id}`)} className="w-full">
+                        <CheckCircle2 className="w-4 h-4 mr-2 text-[#2D5016]" />Перейти к курсу
                       </Button>
+                    ) : course.accessType === 'free' ? (
+                      <Button onClick={() => handleEnroll(course.id)} disabled={busyId === course.id} className="w-full transition-transform active:scale-[0.98]">
+                        {busyId === course.id ? 'Запись...' : 'Записаться бесплатно'}<ArrowRight className="w-4 h-4 ml-2" />
+                      </Button>
+                    ) : (
+                      <Badge variant="secondary" className="w-full justify-center py-2">
+                        {course.accessType === 'paid' ? 'Оплата скоро появится' : 'Доступ по приглашению автора'}
+                      </Badge>
                     )}
                   </CardContent>
                 </Card>

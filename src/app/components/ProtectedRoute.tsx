@@ -1,6 +1,8 @@
-import { Navigate, Outlet } from 'react-router';
+import { Navigate, Outlet, useLocation } from 'react-router';
 import { useAuth } from '../context/AuthContext';
 import { UserRole } from '../types';
+import { homeFor } from '../lib/navigation';
+import { PageSkeleton } from './skeletons/PageSkeleton';
 
 interface ProtectedRouteProps {
   allowedRoles?: UserRole[];
@@ -8,20 +10,18 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ allowedRoles, children }: ProtectedRouteProps) {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, loading } = useAuth();
+  const location = useLocation();
+
+  if (loading) return <PageSkeleton />;
 
   if (!isAuthenticated || !user) {
-    return <Navigate to="/login" replace />;
+    const next = encodeURIComponent(location.pathname + location.search);
+    return <Navigate to={`/login?next=${next}`} replace />;
   }
 
   if (allowedRoles && !allowedRoles.includes(user.role)) {
-    const redirectMap: Record<string, string> = {
-      author: '/author',
-      student: '/student',
-      curator: '/curator',
-      admin: '/admin',
-    };
-    return <Navigate to={redirectMap[user.role] || '/'} replace />;
+    return <Navigate to={homeFor(user)} replace />;
   }
 
   return children ? <>{children}</> : <Outlet />;

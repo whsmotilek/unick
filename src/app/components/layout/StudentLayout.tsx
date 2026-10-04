@@ -5,7 +5,7 @@ import {
   FileCheck,
   MessageSquare,
   TrendingUp,
-  CreditCard,
+
   User,
   LogOut,
   Trophy,
@@ -18,6 +18,7 @@ import { Badge } from '../ui/badge';
 import { useAuth } from '../../context/AuthContext';
 import { useDataStore } from '../../store/DataStore';
 import { MobileNav } from '../MobileNav';
+import { DemoBanner } from '../DemoBanner';
 import { motion } from 'motion/react';
 import logoWhiteFull from '@/assets/logo/logo-full-white.png';
 
@@ -29,7 +30,6 @@ const navigation = [
   { name: 'Прогресс', href: '/student/progress', icon: TrendingUp },
   { name: 'Чаты', href: '/student/chat', icon: MessageSquare },
   { name: 'Календарь', href: '/student/calendar', icon: Calendar },
-  { name: 'Платежи', href: '/student/payments', icon: CreditCard },
   { name: 'Профиль', href: '/student/profile', icon: User },
 ];
 
@@ -38,7 +38,7 @@ export function StudentLayout() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { getCompletedLessonsCount } = useDataStore();
-  const isActive = (path: string) => location.pathname === path;
+  const isActive = (path: string) => location.pathname === path || (path !== '/student' && location.pathname.startsWith(path + '/'));
 
   const handleLogout = () => {
     logout();
@@ -69,14 +69,14 @@ export function StudentLayout() {
             {user?.name || 'Ученик'}
           </p>
           <Badge variant="secondary" className="text-[10px] mt-1 h-4 px-1.5 bg-white/15 text-white border-0">
-            Level {level}
+            Уровень {level}
           </Badge>
         </div>
       </div>
 
       <div className="bg-gradient-to-br from-[#7C6AF7] to-[#9B8AF9] rounded-lg p-3 text-white mb-3">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-[11px] font-medium" style={{ fontFamily: 'var(--font-body)' }}>До Lvl {level + 1}</span>
+          <span className="text-[11px] font-medium" style={{ fontFamily: 'var(--font-body)' }}>До уровня {level + 1}</span>
           <span className="text-sm font-bold" style={{ fontFamily: 'var(--font-heading)' }}>{Math.round(levelProgress)}%</span>
         </div>
         <div className="w-full bg-white/20 rounded-full h-1.5">
@@ -149,6 +149,7 @@ export function StudentLayout() {
           animate={{ opacity: 1 }}
           transition={{ duration: 0.15 }}
         >
+          <DemoBanner />
           <Outlet />
         </motion.div>
       </main>

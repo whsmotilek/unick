@@ -281,7 +281,11 @@ export function WaitlistPopup() {
                 className="text-[11px] text-[#8A8A9A] text-center"
                 style={{ fontFamily: 'var(--font-body)' }}
               >
-                Никакого спама. Только новости о запуске.
+                Нажимая «Записаться», вы даёте{' '}
+                <a href={`${import.meta.env.BASE_URL}legal/privacy`} target="_blank" rel="noopener noreferrer" className="underline">
+                  согласие на обработку персональных данных
+                </a>
+                . Никакого спама — только новости о запуске.
               </p>
             </form>
           )}

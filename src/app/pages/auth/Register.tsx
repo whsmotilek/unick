@@ -4,265 +4,187 @@ import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Card, CardContent } from '../../components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
-import { Link, useNavigate } from 'react-router';
-import { GraduationCap, BookOpen, Check, Sparkles } from 'lucide-react';
+import { Link, useNavigate, useSearchParams } from 'react-router';
+import { GraduationCap, BookOpen, Check, MailCheck } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'sonner';
-import logoBlackFull from '@/assets/logo/logo-full-black.png';
+import { UserRole } from '../../types';
+import { AuthShell, inputClass } from './AuthShell';
+import { homeFor, safeNext } from '../../lib/navigation';
+
+const benefits = {
+  student: [
+    'Уроки, задания и материалы курса в одном месте',
+    'Обратная связь от автора по домашним заданиям',
+    'Прогресс по каждому курсу',
+    'Работает с телефона и компьютера',
+  ],
+  author: [
+    'Курс собирается за час без технического специалиста',
+    'Видео, тексты, файлы и домашние задания',
+    'Ученики по ссылке-приглашению или бесплатной записи',
+    'Проверка домашних заданий и прогресс учеников',
+  ],
+};
+
+function Consent({ id }: { id: string }) {
+  return (
+    <div className="flex items-start gap-2">
+      <input type="checkbox" id={id} className="mt-1 w-4 h-4" required />
+      <label htmlFor={id} className="text-sm text-[#8A8A9A]" style={{ fontFamily: 'var(--font-body)' }}>
+        Принимаю{' '}
+        <Link to="/legal/terms" target="_blank" className="text-[#7C6AF7] hover:underline">условия использования</Link>{' '}
+        и даю{' '}
+        <Link to="/legal/privacy" target="_blank" className="text-[#7C6AF7] hover:underline">согласие на обработку персональных данных</Link>
+      </label>
+    </div>
+  );
+}
 
 export function Register() {
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const next = safeNext(params.get('next'));
+  // Пришёл по приглашению в курс — регистрируем только ученика
+  const studentOnly = !!next?.startsWith('/join/');
   const { register, isAuthenticated, user } = useAuth();
-  const [activeTab, setActiveTab] = useState('student');
+  const [activeTab, setActiveTab] = useState<'student' | 'author'>(params.get('role') === 'author' && !studentOnly ? 'author' : 'student');
   const [isLoading, setIsLoading] = useState(false);
+  const [confirmEmail, setConfirmEmail] = useState<string | null>(null);
 
-  // Form state
-  const [studentName, setStudentName] = useState('');
-  const [studentSurname, setStudentSurname] = useState('');
-  const [studentEmail, setStudentEmail] = useState('');
-  const [studentPassword, setStudentPassword] = useState('');
-  const [authorName, setAuthorName] = useState('');
-  const [authorEmail, setAuthorEmail] = useState('');
-  const [authorPassword, setAuthorPassword] = useState('');
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [schoolName, setSchoolName] = useState('');
 
   useEffect(() => {
-    if (isAuthenticated && user) {
-      const redirectMap: Record<string, string> = {
-        author: '/author',
-        student: '/student',
-        curator: '/curator',
-        admin: '/admin',
-      };
-      navigate(redirectMap[user.role] || '/', { replace: true });
-    }
-  }, [isAuthenticated, user, navigate]);
+    if (isAuthenticated && user) navigate(next || homeFor(user), { replace: true });
+  }, [isAuthenticated, user, navigate, next]);
 
-  const handleStudentRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const name = `${studentName.trim()} ${studentSurname.trim()}`.trim();
-    if (!name) { toast.error('Введите имя'); return; }
-    if (!studentEmail.trim()) { toast.error('Введите email'); return; }
-    if (studentPassword.length < 6) { toast.error('Пароль минимум 6 символов'); return; }
-
+  const submit = async (role: UserRole) => {
+    if (!name.trim()) { toast.error('Введите имя'); return; }
+    if (!email.trim()) { toast.error('Введите email'); return; }
+    if (password.length < 6) { toast.error('Пароль — минимум 6 символов'); return; }
     setIsLoading(true);
-    await new Promise(r => setTimeout(r, 400));
-    const result = register(name, studentEmail, studentPassword, 'student');
+    const result = await register(name.trim(), email, password, role, {
+      schoolName: role === 'author' ? schoolName.trim() : undefined,
+      redirectPath: next || '/login',
+    });
     setIsLoading(false);
-
-    if (result.success) {
-      toast.success('Аккаунт создан!');
-    } else {
-      toast.error(result.error || 'Ошибка регистрации');
-    }
+    if (!result.success) { toast.error(result.error || 'Ошибка регистрации'); return; }
+    if (result.needsConfirmation) { setConfirmEmail(email.trim()); return; }
+    toast.success(role === 'author' ? 'Аккаунт автора создан' : 'Аккаунт создан');
   };
 
-  const handleAuthorRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!authorName.trim()) { toast.error('Введите имя'); return; }
-    if (!authorEmail.trim()) { toast.error('Введите email'); return; }
-    if (authorPassword.length < 6) { toast.error('Пароль минимум 6 символов'); return; }
+  if (confirmEmail) {
+    return (
+      <AuthShell subtitle="Остался один шаг">
+        <Card className="border-0 shadow-[0_8px_30px_rgba(0,0,0,0.08)]">
+          <CardContent className="p-8 text-center">
+            <MailCheck className="w-12 h-12 mx-auto mb-4 text-[#7C6AF7]" strokeWidth={1.5} />
+            <h2 className="text-[20px] font-bold mb-2" style={{ fontFamily: 'var(--font-heading)' }}>Подтвердите email</h2>
+            <p className="text-sm text-[#8A8A9A]" style={{ fontFamily: 'var(--font-body)' }}>
+              Мы отправили письмо на <b className="text-[#1A1A2E]">{confirmEmail}</b>. Перейдите по ссылке из письма — и вы окажетесь в аккаунте.
+              Письмо может попасть в «Спам».
+            </p>
+          </CardContent>
+        </Card>
+      </AuthShell>
+    );
+  }
 
-    setIsLoading(true);
-    await new Promise(r => setTimeout(r, 400));
-    const result = register(authorName, authorEmail, authorPassword, 'author');
-    setIsLoading(false);
+  const commonFields = (prefix: string) => (
+    <>
+      <div>
+        <Label htmlFor={`${prefix}-name`}>Имя и фамилия</Label>
+        <Input id={`${prefix}-name`} autoComplete="name" placeholder="Анна Иванова" required value={name} onChange={e => setName(e.target.value)} className={inputClass} />
+      </div>
+      <div>
+        <Label htmlFor={`${prefix}-email`}>Email</Label>
+        <Input id={`${prefix}-email`} type="email" autoComplete="email" placeholder="your@email.com" required value={email} onChange={e => setEmail(e.target.value)} className={inputClass} />
+      </div>
+      <div>
+        <Label htmlFor={`${prefix}-password`}>Пароль</Label>
+        <Input id={`${prefix}-password`} type="password" autoComplete="new-password" placeholder="Минимум 6 символов" required value={password} onChange={e => setPassword(e.target.value)} className={inputClass} />
+      </div>
+    </>
+  );
 
-    if (result.success) {
-      toast.success('Школа создана!');
-    } else {
-      toast.error(result.error || 'Ошибка регистрации');
-    }
-  };
-
-  const benefits = {
-    student: [
-      'Удобный интерфейс обучения',
-      'Отслеживание прогресса',
-      'Система достижений',
-      'Чаты с кураторами',
-      'Сертификаты об окончании'
-    ],
-    author: [
-      '14 дней бесплатно',
-      'AI-аналитика',
-      'Конструктор курсов',
-      'Управление командой',
-      'Белый лейбл',
-      'Прием платежей'
-    ]
-  };
+  const loginLink = next ? `/login?next=${encodeURIComponent(next)}` : '/login';
 
   return (
-    <div className="min-h-screen bg-[#F5F4F2] flex items-center justify-center p-6">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: 'easeOut' }}
-        className="w-full max-w-5xl"
-      >
-        <div className="text-center mb-8">
-          <Link to="/" className="inline-flex items-center mb-4">
-            <img src={logoBlackFull} alt="Unick" className="h-8" />
-          </Link>
-          <p className="text-[#8A8A9A] text-[13px]" style={{ fontFamily: 'var(--font-body)' }}>
-            Создайте аккаунт за 2 минуты
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
-            <Card className="border-0 shadow-[0_8px_30px_rgba(0,0,0,0.08)]">
-              <CardContent className="p-8">
-                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+    <AuthShell subtitle={studentOnly ? 'Создайте аккаунт, чтобы получить доступ к курсу' : 'Создайте аккаунт за 2 минуты'} wide>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          <Card className="border-0 shadow-[0_8px_30px_rgba(0,0,0,0.08)]">
+            <CardContent className="p-8">
+              <Tabs value={activeTab} onValueChange={v => setActiveTab(v as 'student' | 'author')} className="w-full">
+                {!studentOnly && (
                   <TabsList className="grid w-full grid-cols-2 mb-6 bg-[#F5F4F2] p-1 rounded-xl">
-                    <TabsTrigger
-                      value="student"
-                      className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all"
-                    >
+                    <TabsTrigger value="student" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all">
                       <GraduationCap className="w-4 h-4 mr-2" />
                       Я ученик
                     </TabsTrigger>
-                    <TabsTrigger
-                      value="author"
-                      className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all"
-                    >
+                    <TabsTrigger value="author" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all">
                       <BookOpen className="w-4 h-4 mr-2" />
                       Я автор
                     </TabsTrigger>
                   </TabsList>
+                )}
 
-                  <TabsContent value="student">
-                    <form onSubmit={handleStudentRegister} className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label htmlFor="student-name">Имя</Label>
-                          <Input id="student-name" placeholder="Иван" required value={studentName} onChange={e => setStudentName(e.target.value)} className="mt-1.5 h-11 rounded-xl border-[#1A1A2E]/10" />
-                        </div>
-                        <div>
-                          <Label htmlFor="student-surname">Фамилия</Label>
-                          <Input id="student-surname" placeholder="Иванов" required value={studentSurname} onChange={e => setStudentSurname(e.target.value)} className="mt-1.5 h-11 rounded-xl border-[#1A1A2E]/10" />
-                        </div>
-                      </div>
-                      <div>
-                        <Label htmlFor="student-email">Email</Label>
-                        <Input id="student-email" type="email" placeholder="your@email.com" required value={studentEmail} onChange={e => setStudentEmail(e.target.value)} className="mt-1.5 h-11 rounded-xl border-[#1A1A2E]/10" />
-                      </div>
-                      <div>
-                        <Label htmlFor="student-password">Пароль</Label>
-                        <Input id="student-password" type="password" placeholder="Минимум 6 символов" required value={studentPassword} onChange={e => setStudentPassword(e.target.value)} className="mt-1.5 h-11 rounded-xl border-[#1A1A2E]/10" />
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <input type="checkbox" id="student-terms" className="mt-1 w-4 h-4" required />
-                        <label htmlFor="student-terms" className="text-sm text-[#8A8A9A]" style={{ fontFamily: 'var(--font-body)' }}>
-                          Я согласен с{' '}
-                          <a href="#" className="text-[#7C6AF7] hover:underline">Условиями использования</a>{' '}и{' '}
-                          <a href="#" className="text-[#7C6AF7] hover:underline">Политикой конфиденциальности</a>
-                        </label>
-                      </div>
-                      <Button type="submit" className="w-full h-11 transition-transform active:scale-[0.98]" size="lg" disabled={isLoading}>
-                        {isLoading ? 'Создание...' : 'Создать аккаунт ученика'}
-                      </Button>
-                    </form>
-                  </TabsContent>
+                <TabsContent value="student">
+                  <form onSubmit={e => { e.preventDefault(); submit('student'); }} className="space-y-4">
+                    {commonFields('student')}
+                    <Consent id="student-terms" />
+                    <Button type="submit" className="w-full h-11 transition-transform active:scale-[0.98]" size="lg" disabled={isLoading}>
+                      {isLoading ? 'Создание...' : 'Создать аккаунт'}
+                    </Button>
+                  </form>
+                </TabsContent>
 
-                  <TabsContent value="author">
-                    <form onSubmit={handleAuthorRegister} className="space-y-4">
-                      <div>
-                        <Label htmlFor="author-name">Ваше имя</Label>
-                        <Input id="author-name" placeholder="Анна Иванова" required value={authorName} onChange={e => setAuthorName(e.target.value)} className="mt-1.5 h-11 rounded-xl border-[#1A1A2E]/10" />
-                      </div>
-                      <div>
-                        <Label htmlFor="author-email">Email</Label>
-                        <Input id="author-email" type="email" placeholder="your@email.com" required value={authorEmail} onChange={e => setAuthorEmail(e.target.value)} className="mt-1.5 h-11 rounded-xl border-[#1A1A2E]/10" />
-                      </div>
-                      <div>
-                        <Label htmlFor="author-password">Пароль</Label>
-                        <Input id="author-password" type="password" placeholder="Минимум 6 символов" required value={authorPassword} onChange={e => setAuthorPassword(e.target.value)} className="mt-1.5 h-11 rounded-xl border-[#1A1A2E]/10" />
-                      </div>
-                      <div className="bg-[#EDE9FF] border border-[#7C6AF7]/20 rounded-xl p-4">
-                        <p className="text-sm font-medium text-[#1A1A2E] mb-1 flex items-center gap-2">
-                          <Sparkles className="w-4 h-4 text-[#7C6AF7]" />
-                          Бесплатный пробный период
-                        </p>
-                        <p className="text-xs text-[#8A8A9A]" style={{ fontFamily: 'var(--font-body)' }}>
-                          14 дней бесплатного доступа ко всем функциям. Кредитная карта не требуется.
-                        </p>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <input type="checkbox" id="author-terms" className="mt-1 w-4 h-4" required />
-                        <label htmlFor="author-terms" className="text-sm text-[#8A8A9A]" style={{ fontFamily: 'var(--font-body)' }}>
-                          Я согласен с{' '}
-                          <a href="#" className="text-[#7C6AF7] hover:underline">Условиями использования</a>{' '}и{' '}
-                          <a href="#" className="text-[#7C6AF7] hover:underline">Политикой конфиденциальности</a>
-                        </label>
-                      </div>
-                      <Button type="submit" className="w-full h-11 transition-transform active:scale-[0.98]" size="lg" disabled={isLoading}>
-                        {isLoading ? 'Создание...' : 'Создать школу бесплатно'}
-                      </Button>
-                    </form>
-                  </TabsContent>
-                </Tabs>
+                <TabsContent value="author">
+                  <form onSubmit={e => { e.preventDefault(); submit('author'); }} className="space-y-4">
+                    {commonFields('author')}
+                    <div>
+                      <Label htmlFor="author-school">Название проекта или школы <span className="text-[#8A8A9A]">(необязательно)</span></Label>
+                      <Input id="author-school" placeholder="Школа акварели Анны" value={schoolName} onChange={e => setSchoolName(e.target.value)} className={inputClass} />
+                    </div>
+                    <Consent id="author-terms" />
+                    <Button type="submit" className="w-full h-11 transition-transform active:scale-[0.98]" size="lg" disabled={isLoading}>
+                      {isLoading ? 'Создание...' : 'Создать аккаунт автора'}
+                    </Button>
+                  </form>
+                </TabsContent>
+              </Tabs>
 
-                <div className="mt-6 text-center text-sm text-[#8A8A9A]" style={{ fontFamily: 'var(--font-body)' }}>
-                  Уже есть аккаунт?{' '}
-                  <Link to="/login" className="text-[#7C6AF7] hover:underline font-medium">Войти</Link>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="space-y-4"
-          >
-            <Card className="bg-gradient-to-br from-[#7C6AF7] to-[#9B8AF9] text-white border-0">
-              <CardContent className="p-6">
-                <h3 className="font-semibold mb-4 text-[16px]" style={{ fontFamily: 'var(--font-heading)' }}>
-                  {activeTab === 'student' ? 'Преимущества для ученика' : 'Преимущества для автора'}
-                </h3>
-                <ul className="space-y-3">
-                  {benefits[activeTab as keyof typeof benefits].map((benefit, index) => (
-                    <motion.li
-                      key={`${activeTab}-${index}`}
-                      initial={{ opacity: 0, x: 10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                      className="flex items-start gap-2 text-sm"
-                    >
-                      <Check className="w-5 h-5 flex-shrink-0 mt-0.5" strokeWidth={2} />
-                      <span style={{ fontFamily: 'var(--font-body)' }}>{benefit}</span>
-                    </motion.li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
-
-            <Card className="border-0">
-              <CardContent className="p-6">
-                <h4 className="font-semibold text-sm mb-3 text-[#1A1A2E]" style={{ fontFamily: 'var(--font-heading)' }}>
-                  Защита данных
-                </h4>
-                <p className="text-xs text-[#8A8A9A] mb-3 leading-relaxed" style={{ fontFamily: 'var(--font-body)' }}>
-                  Мы используем современные технологии шифрования для защиты ваших данных.
-                </p>
-                <div className="flex items-center gap-2 text-xs text-[#8A8A9A]">
-                  <div className="w-2 h-2 bg-[#C5E8A0] rounded-full"></div>
-                  <span style={{ fontFamily: 'var(--font-body)' }}>SSL Шифрование</span>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
+              <div className="mt-6 text-center text-sm text-[#8A8A9A]" style={{ fontFamily: 'var(--font-body)' }}>
+                Уже есть аккаунт?{' '}
+                <Link to={loginLink} className="text-[#7C6AF7] hover:underline font-medium">Войти</Link>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
-        <div className="mt-6 text-center">
-          <Link to="/" className="text-sm text-[#8A8A9A] hover:text-[#1A1A2E] transition-colors" style={{ fontFamily: 'var(--font-body)' }}>
-            ← Вернуться на главную
-          </Link>
-        </div>
-      </motion.div>
-    </div>
+        <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, delay: 0.2 }}>
+          <Card className="bg-gradient-to-br from-[#7C6AF7] to-[#9B8AF9] text-white border-0">
+            <CardContent className="p-6">
+              <h3 className="font-semibold mb-4 text-[16px]" style={{ fontFamily: 'var(--font-heading)' }}>
+                {activeTab === 'student' ? 'Для ученика' : 'Для автора'}
+              </h3>
+              <ul className="space-y-3">
+                {benefits[activeTab].map((benefit, index) => (
+                  <motion.li key={`${activeTab}-${index}`} initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.05 }} className="flex items-start gap-2 text-sm">
+                    <Check className="w-5 h-5 flex-shrink-0 mt-0.5" strokeWidth={2} />
+                    <span style={{ fontFamily: 'var(--font-body)' }}>{benefit}</span>
+                  </motion.li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
+    </AuthShell>
   );
 }

@@ -1,11 +1,22 @@
+# Unick
 
-  # Multi-Tenant Learning Platform
+Платформа, где автор создаёт курс (видео, тексты, тесты, домашние задания), приглашает учеников по ссылке и ведёт обучение.
 
-  This is a code bundle for Multi-Tenant Learning Platform. The original project is available at https://www.figma.com/design/b3V0eXbw9RIaLlq5Uke3Rn/Multi-Tenant-Learning-Platform.
+- Сайт: https://whsmotilek.github.io/unick/
+- План и статус: [docs/ROADMAP.md](docs/ROADMAP.md)
+- Подключение бэкенда: [docs/SETUP.md](docs/SETUP.md)
 
-  ## Running the code
+## Стек
 
-  Run `npm i` to install the dependencies.
+React 18 + Vite + Tailwind, Supabase (PostgreSQL с RLS, Auth, Storage). Без ключей Supabase приложение работает в демо-режиме (данные в localStorage).
 
-  Run `npm run dev` to start the development server.
-  
+## Разработка
+
+```bash
+npm ci
+npm run dev        # http://localhost:5173/unick/
+npm run typecheck
+npm test
+```
+
+Миграции базы — `supabase/migrations`, тесты прав доступа — `supabase/tests`.

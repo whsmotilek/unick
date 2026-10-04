@@ -12,28 +12,22 @@ import { CountUp } from '../../components/CountUp';
 import { EmptyState } from '../../components/EmptyState';
 import { motion } from 'motion/react';
 import { Link } from 'react-router';
-import { mockUsers } from '../../data/mockData';
 import { User } from '../../types';
 
 type Stage = 'all' | 'leads' | 'active' | 'completing' | 'at_risk' | 'completed';
 
 export function AuthorCRM() {
   const { user } = useAuth();
-  const { courses, enrollments, progress, getCourseProgress, getCompletedLessonsCount } = useDataStore();
+  const { courses, enrollments, progress, getCourseProgress, getCompletedLessonsCount, users } = useDataStore();
   const [stage, setStage] = useState<Stage>('all');
   const [search, setSearch] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const myCourseIds = useMemo(() => {
-    return courses.filter(c => c.schoolId === (user?.schoolId || 'school-1')).map(c => c.id);
+    return courses.filter(c => c.schoolId === user?.schoolId).map(c => c.id);
   }, [courses, user]);
 
-  const allUsers = useMemo<User[]>(() => {
-    try {
-      const stored = localStorage.getItem('unick_users');
-      return stored ? JSON.parse(stored) : mockUsers;
-    } catch { return mockUsers; }
-  }, []);
+  const allUsers = users;
 
   const userMap = useMemo(() => {
     const m: Record<string, User> = {};

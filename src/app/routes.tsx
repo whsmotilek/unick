@@ -1,8 +1,11 @@
-import { createBrowserRouter } from 'react-router';
+import { createBrowserRouter, Link } from 'react-router';
 import { lazy, Suspense } from 'react';
 import { Landing } from './pages/landing/Landing';
 import { Login } from './pages/auth/Login';
 import { Register } from './pages/auth/Register';
+import { ForgotPassword, ResetPassword } from './pages/auth/PasswordReset';
+import { JoinCourse } from './pages/JoinCourse';
+import { LegalPage } from './pages/legal/LegalPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AuthorLayout } from './components/layout/AuthorLayout';
 import { StudentLayout } from './components/layout/StudentLayout';
@@ -21,6 +24,7 @@ import { AuthorHomeworkReview } from './pages/author/AuthorHomeworkReview';
 import { StudentDashboard } from './pages/student/StudentDashboard';
 import { StudentCourses } from './pages/student/StudentCourses';
 import { StudentLesson } from './pages/student/StudentLesson';
+import { StudentCourseOverview } from './pages/student/StudentCourseOverview';
 import { StudentCatalog } from './pages/student/StudentCatalog';
 import { StudentHomework } from './pages/student/StudentHomework';
 import { StudentProgress } from './pages/student/StudentProgress';
@@ -63,6 +67,16 @@ export const router = createBrowserRouter([
   { path: '/', element: <Landing /> },
   { path: '/login', element: <Login /> },
   { path: '/register', element: <Register /> },
+  { path: '/forgot-password', element: <ForgotPassword /> },
+  { path: '/reset-password', element: <ResetPassword /> },
+  { path: '/join/:code', element: <JoinCourse /> },
+  { path: '/legal/:doc', element: <LegalPage /> },
+
+  // Предпросмотр курса автором — полноэкранный, без бокового меню кабинета
+  {
+    path: '/author/courses/:id/preview/:lessonId',
+    element: <ProtectedRoute allowedRoles={['author', 'curator']}><StudentLesson /></ProtectedRoute>,
+  },
 
   // Author
   {
@@ -97,6 +111,7 @@ export const router = createBrowserRouter([
       { index: true, element: <StudentDashboard /> },
       { path: 'catalog', element: <StudentCatalog /> },
       { path: 'courses', element: <StudentCourses /> },
+      { path: 'courses/:id', element: <StudentCourseOverview /> },
       { path: 'courses/:id/lesson/:lessonId', element: <StudentLesson /> },
       { path: 'homework', element: <StudentHomework /> },
       { path: 'progress', element: <StudentProgress /> },
@@ -127,7 +142,7 @@ export const router = createBrowserRouter([
         <div className="text-center">
           <h1 className="text-[64px] font-bold text-[#1A1A2E] mb-2" style={{ fontFamily: 'var(--font-heading)' }}>404</h1>
           <p className="text-[16px] text-[#8A8A9A] mb-6" style={{ fontFamily: 'var(--font-body)' }}>Страница не найдена</p>
-          <a href="/" className="text-[#7C6AF7] hover:underline font-medium" style={{ fontFamily: 'var(--font-body)' }}>← Вернуться на главную</a>
+          <Link to="/" className="text-[#7C6AF7] hover:underline font-medium" style={{ fontFamily: 'var(--font-body)' }}>← Вернуться на главную</Link>
         </div>
       </div>
     ),

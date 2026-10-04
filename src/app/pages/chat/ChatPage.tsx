@@ -10,26 +10,17 @@ import { useAuth } from '../../context/AuthContext';
 import { EmptyState } from '../../components/EmptyState';
 import { motion, AnimatePresence } from 'motion/react';
 import { User } from '../../types';
-import { mockUsers } from '../../data/mockData';
 
 export function ChatPage() {
   const { user } = useAuth();
-  const { sendMessage, getChatMessages, getChatThreads, markChatRead, courses, enrollments } = useDataStore();
+  const { sendMessage, getChatMessages, getChatThreads, markChatRead, courses, enrollments, users } = useDataStore();
   const [activeUserId, setActiveUserId] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
   const [newChatOpen, setNewChatOpen] = useState(false);
   const [searchUser, setSearchUser] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Get all users from localStorage
-  const allUsers = useMemo<User[]>(() => {
-    try {
-      const stored = localStorage.getItem('unick_users');
-      return stored ? JSON.parse(stored) : mockUsers;
-    } catch {
-      return mockUsers;
-    }
-  }, []);
+  const allUsers = users;
 
   const userMap = useMemo(() => {
     const m: Record<string, User> = {};
@@ -62,14 +53,14 @@ export function ChatPage() {
         if (enrolledIds.includes(c.id)) {
           // Find authors of school
           for (const u of allUsers) {
-            if (u.role === 'author' && u.schoolId === c.schoolId) authorIds.add(u.id);
+            if ((u.role === 'author' || u.role === 'curator') && u.schoolId === c.schoolId) authorIds.add(u.id);
           }
         }
       }
       return allUsers.filter(u => authorIds.has(u.id));
     }
-    if (user.role === 'author') {
-      // Students enrolled in author's courses
+    if (user.role === 'author' || user.role === 'curator') {
+      // Students enrolled in the school's courses
       const myCourseIds = courses.filter(c => c.schoolId === user.schoolId).map(c => c.id);
       const studentIds = new Set<string>();
       for (const [uid, cids] of Object.entries(enrollments)) {
@@ -92,21 +83,8 @@ export function ChatPage() {
 
   const handleSend = () => {
     if (!user || !activeUserId || !draft.trim()) return;
-    sendMessage(user.id, activeUserId, draft);
+    sendMessage(user.id, activeUserId, draft.trim());
     setDraft('');
-
-    // Simulate auto-reply after 2s
-    setTimeout(() => {
-      const replies = [
-        'Спасибо за сообщение! Скоро отвечу подробнее',
-        'Хороший вопрос, давайте обсудим',
-        'Получил ваше сообщение, изучаю',
-        'Отличная мысль! Расскажите подробнее',
-        'Спасибо! Я свяжусь с вами в ближайшее время',
-      ];
-      const reply = replies[Math.floor(Math.random() * replies.length)];
-      sendMessage(activeUserId, user.id, reply);
-    }, 1500 + Math.random() * 1500);
   };
 
   const startChat = (contactId: string) => {

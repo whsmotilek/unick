@@ -10,16 +10,15 @@ import { useAuth } from '../../context/AuthContext';
 import { EmptyState } from '../../components/EmptyState';
 import { CountUp } from '../../components/CountUp';
 import { motion } from 'motion/react';
-import { mockUsers } from '../../data/mockData';
 import { User } from '../../types';
 
 export function AuthorStudents() {
   const { user } = useAuth();
-  const { courses, enrollments, progress, getCourseProgress, getCompletedLessonsCount } = useDataStore();
+  const { courses, enrollments, progress, getCourseProgress, getCompletedLessonsCount, users } = useDataStore();
   const [searchQuery, setSearchQuery] = useState('');
 
   const myCourseIds = useMemo(() => {
-    return courses.filter(c => c.schoolId === (user?.schoolId || 'school-1')).map(c => c.id);
+    return courses.filter(c => c.schoolId === user?.schoolId).map(c => c.id);
   }, [courses, user]);
 
   const myCoursesMap = useMemo(() => {
@@ -28,12 +27,7 @@ export function AuthorStudents() {
     return m;
   }, [courses]);
 
-  const allUsers = useMemo<User[]>(() => {
-    try {
-      const stored = localStorage.getItem('unick_users');
-      return stored ? JSON.parse(stored) : mockUsers;
-    } catch { return mockUsers; }
-  }, []);
+  const allUsers = users;
 
   const students = useMemo(() => {
     const map: Record<string, { user: User; courses: { id: string; title: string; progress: number }[] }> = {};

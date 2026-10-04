@@ -3,6 +3,7 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -23,9 +24,17 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
       - run: npm run build
         env:
           VITE_WAITLIST_ENDPOINT: ${{ secrets.WAITLIST_ENDPOINT }}
+          # Без этих двух переменных приложение собирается в демо-режиме (данные в браузере)
+          VITE_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          VITE_LEGAL_OPERATOR: ${{ vars.LEGAL_OPERATOR }}
+          VITE_LEGAL_REQUISITES: ${{ vars.LEGAL_REQUISITES }}
+          VITE_CONTACT_EMAIL: ${{ vars.CONTACT_EMAIL }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

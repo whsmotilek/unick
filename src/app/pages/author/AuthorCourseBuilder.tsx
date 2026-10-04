@@ -5,165 +5,232 @@ import { Badge } from '../../components/ui/badge';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Textarea } from '../../components/ui/textarea';
+import { Switch } from '../../components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../../components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import {
-  ArrowLeft, Save, Plus, Video, FileText, CheckSquare, BookOpen, Trash2, Edit, ChevronDown, ChevronUp
+  ArrowLeft, Save, Plus, Video, FileText, CheckSquare, BookOpen, Trash2, Edit, ChevronDown, ChevronUp,
+  ArrowUp, ArrowDown, Paperclip, Eye, Users,
 } from 'lucide-react';
-import { Link, useParams, useNavigate } from 'react-router';
+import { Link, useParams, useNavigate, useSearchParams } from 'react-router';
 import { useDataStore } from '../../store/DataStore';
+import { useAuth } from '../../context/AuthContext';
 import { toast } from 'sonner';
-import { Lesson } from '../../types';
+import { Course, CourseAccessType, Lesson } from '../../types';
+import { LessonEditorDialog, type LessonDraft } from '../../components/author/LessonEditorDialog';
+import { CourseAccessPanel } from '../../components/author/CourseAccessPanel';
+import { FileUpload } from '../../components/lesson/FileUpload';
+import { LESSON_TYPE_LABELS } from '../../lib/lessonContent';
+import { PageSkeleton } from '../../components/skeletons/PageSkeleton';
 
-const lessonIcons = {
+const lessonIcons: Record<Lesson['type'], typeof Video> = {
   video: Video,
   text: FileText,
   quiz: CheckSquare,
   homework: BookOpen,
   audio: FileText,
-  file: FileText,
+  file: Paperclip,
 };
 
-const lessonLabels = {
-  video: 'Видео',
-  text: 'Текст',
-  quiz: 'Тест',
-  homework: 'Домашка',
-  audio: 'Аудио',
-  file: 'Файл',
+const ACCESS_LABELS: Record<CourseAccessType, { title: string; hint: string }> = {
+  invite: { title: 'По приглашению', hint: 'Ученики попадают в курс по вашей ссылке или вы добавляете их вручную.' },
+  free: { title: 'Свободная запись', hint: 'Любой зарегистрированный пользователь может записаться бесплатно из каталога.' },
+  paid: { title: 'Платный', hint: 'Приём оплаты на платформе появится позже. Пока выдавайте доступ ссылкой после оплаты.' },
 };
+
+function CourseSettings({ course, onSaved }: { course: Course | undefined; onSaved: (c: Partial<Course>) => void }) {
+  const [title, setTitle] = useState(course?.title || '');
+  const [description, setDescription] = useState(course?.description || '');
+  const [cover, setCover] = useState(course?.cover || '');
+  const [status, setStatus] = useState<'draft' | 'published'>(course?.status === 'published' ? 'published' : 'draft');
+  const [accessType, setAccessType] = useState<CourseAccessType>(course?.accessType || 'invite');
+  const [price, setPrice] = useState(course?.price ? String(course.price) : '');
+  const [sequential, setSequential] = useState(course?.sequential ?? false);
+
+  useEffect(() => {
+    if (!course) return;
+    setTitle(course.title);
+    setDescription(course.description);
+    setCover(course.cover || '');
+    setStatus(course.status === 'published' ? 'published' : 'draft');
+    setAccessType(course.accessType);
+    setPrice(course.price ? String(course.price) : '');
+    setSequential(course.sequential);
+  }, [course?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const save = () => {
+    if (!title.trim()) { toast.error('Введите название курса'); return; }
+    const priceNum = price ? Number(price) : undefined;
+    if (accessType === 'paid' && (!priceNum || priceNum <= 0)) { toast.error('Укажите цену курса'); return; }
+    onSaved({ title: title.trim(), description, cover: cover || undefined, status, accessType, price: priceNum, sequential });
+  };
+
+  return (
+    <Card className="border-0">
+      <CardContent className="p-6 space-y-5">
+        <div>
+          <Label htmlFor="title">Название курса</Label>
+          <Input id="title" value={title} onChange={e => setTitle(e.target.value)} placeholder="Например: Акварель с нуля" className="mt-1.5" />
+        </div>
+        <div>
+          <Label htmlFor="description">Описание</Label>
+          <Textarea id="description" value={description} onChange={e => setDescription(e.target.value)}
+            placeholder="Чему научится ученик, для кого курс, сколько длится" rows={4} className="mt-1.5" />
+        </div>
+        <div>
+          <Label>Обложка</Label>
+          <div className="mt-1.5 flex items-center gap-4">
+            <div className="w-40 aspect-video rounded-xl bg-[#F5F4F2] overflow-hidden flex items-center justify-center">
+              {cover ? <img src={cover} alt="" className="w-full h-full object-cover" /> : <BookOpen className="w-8 h-8 text-[#8A8A9A]" strokeWidth={1.5} />}
+            </div>
+            {course ? (
+              <div className="flex flex-col gap-2">
+                <FileUpload bucket="covers" pathPrefix={course.id} accept="image/png,image/jpeg,image/webp" label="Загрузить картинку"
+                  onUploaded={f => setCover(f.path)} />
+                {cover && <Button variant="ghost" size="sm" onClick={() => setCover('')}>Убрать</Button>}
+              </div>
+            ) : (
+              <p className="text-xs text-[#8A8A9A]">Загрузить обложку можно после создания курса</p>
+            )}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <Label>Доступ к курсу</Label>
+            <Select value={accessType} onValueChange={(v: CourseAccessType) => setAccessType(v)}>
+              <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {(Object.keys(ACCESS_LABELS) as CourseAccessType[]).map(k => <SelectItem key={k} value={k}>{ACCESS_LABELS[k].title}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-[#8A8A9A] mt-1.5">{ACCESS_LABELS[accessType].hint}</p>
+          </div>
+          {accessType === 'paid' && (
+            <div>
+              <Label htmlFor="price">Цена, ₽</Label>
+              <Input id="price" type="number" min={1} value={price} onChange={e => setPrice(e.target.value)} className="mt-1.5" />
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-start justify-between gap-4 rounded-xl bg-[#F5F4F2] p-4">
+          <div>
+            <p className="text-sm font-medium text-[#1A1A2E]">Уроки по порядку</p>
+            <p className="text-xs text-[#8A8A9A]">Следующий урок открывается после завершения предыдущего; домашнее задание — после того как его примут.</p>
+          </div>
+          <Switch checked={sequential} onCheckedChange={setSequential} />
+        </div>
+
+        <div>
+          <Label>Статус</Label>
+          <Select value={status} onValueChange={(v: 'draft' | 'published') => setStatus(v)}>
+            <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="draft">Черновик — виден только вам</SelectItem>
+              <SelectItem value="published">Опубликован — ученики могут вступить</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <Button onClick={save} className="w-full">
+          <Save className="w-4 h-4 mr-2" />{course ? 'Сохранить настройки' : 'Создать курс'}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
 
 export function AuthorCourseBuilder() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [params, setParams] = useSearchParams();
   const isNew = !id || id === 'new';
-  const { getCourse, createCourse, updateCourse, deleteCourse, addModule, updateModule, deleteModule, addLesson, updateLesson, deleteLesson } = useDataStore();
+  const { user } = useAuth();
+  const {
+    loading, getCourse, createCourse, updateCourse, deleteCourse, addModule, updateModule, deleteModule, moveModule,
+    addLesson, updateLesson, deleteLesson, moveLesson, enrollmentRecords,
+  } = useDataStore();
 
-  const existingCourse = !isNew ? getCourse(id!) : undefined;
-  const [courseId, setCourseId] = useState<string | undefined>(existingCourse?.id);
-  const course = courseId ? getCourse(courseId) : undefined;
+  const course = !isNew ? getCourse(id!) : undefined;
+  const tab = params.get('tab') || (isNew ? 'settings' : 'content');
+  const setTab = (t: string) => setParams(p => { p.set('tab', t); return p; }, { replace: true });
 
-  const [title, setTitle] = useState(course?.title || '');
-  const [description, setDescription] = useState(course?.description || '');
-  const [cover, setCover] = useState(course?.cover || '');
-  const [status, setStatus] = useState<'draft' | 'published'>(course?.status === 'archived' ? 'draft' : (course?.status || 'draft'));
-  const [expandedModule, setExpandedModule] = useState<string | null>(course?.modules[0]?.id || null);
-
-  // Sync local state when course changes
+  const [expandedModule, setExpandedModule] = useState<string | null>(null);
   useEffect(() => {
-    if (course) {
-      setTitle(course.title);
-      setDescription(course.description);
-      setCover(course.cover || '');
-      setStatus(course.status === 'archived' ? 'draft' : course.status);
-    }
-  }, [course?.id]);
+    if (course && expandedModule === null) setExpandedModule(course.modules[0]?.id ?? null);
+  }, [course, expandedModule]);
 
-  // Module dialog
+  // Модуль
   const [moduleDialogOpen, setModuleDialogOpen] = useState(false);
   const [moduleEditId, setModuleEditId] = useState<string | null>(null);
   const [moduleTitle, setModuleTitle] = useState('');
 
-  // Lesson dialog
+  // Урок
   const [lessonDialogOpen, setLessonDialogOpen] = useState(false);
   const [lessonModuleId, setLessonModuleId] = useState<string | null>(null);
-  const [lessonEditId, setLessonEditId] = useState<string | null>(null);
-  const [lessonTitle, setLessonTitle] = useState('');
-  const [lessonType, setLessonType] = useState<Lesson['type']>('video');
-  const [lessonContent, setLessonContent] = useState('');
+  const [editingLesson, setEditingLesson] = useState<Lesson | null>(null);
 
-  // Delete confirmations
+  // Удаление
   const [deleteCourseOpen, setDeleteCourseOpen] = useState(false);
   const [deleteModuleId, setDeleteModuleId] = useState<string | null>(null);
   const [deleteLessonInfo, setDeleteLessonInfo] = useState<{ moduleId: string; lessonId: string } | null>(null);
 
-  const handleSaveCourse = () => {
-    if (!title.trim()) {
-      toast.error('Введите название курса');
+  if (loading) return <PageSkeleton />;
+
+  const handleSettingsSaved = (patch: Partial<Course>) => {
+    if (!course) {
+      if (!user?.schoolId) { toast.error('У аккаунта нет школы. Курсы может создавать только автор.'); return; }
+      const created = createCourse(patch);
+      toast.success('Курс создан. Добавьте модули и уроки');
+      navigate(`/author/courses/${created.id}?tab=content`, { replace: true });
       return;
     }
-    if (isNew && !courseId) {
-      const newCourse = createCourse({ title, description, cover, status });
-      setCourseId(newCourse.id);
-      toast.success('Курс создан!');
-      navigate(`/author/courses/${newCourse.id}`, { replace: true });
-    } else if (courseId) {
-      updateCourse(courseId, { title, description, cover, status });
-      toast.success('Курс сохранён!');
-    }
+    updateCourse(course.id, patch);
+    toast.success('Настройки сохранены');
   };
 
-  const handleAddModule = () => {
-    setModuleEditId(null);
-    setModuleTitle('');
-    setModuleDialogOpen(true);
-  };
-
-  const handleEditModule = (mid: string, currentTitle: string) => {
+  const openModuleDialog = (mid: string | null, currentTitle = '') => {
     setModuleEditId(mid);
     setModuleTitle(currentTitle);
     setModuleDialogOpen(true);
   };
 
   const submitModule = () => {
-    if (!moduleTitle.trim() || !courseId) return;
+    if (!moduleTitle.trim() || !course) return;
     if (moduleEditId) {
-      updateModule(courseId, moduleEditId, { title: moduleTitle });
-      toast.success('Модуль обновлён');
+      updateModule(course.id, moduleEditId, { title: moduleTitle.trim() });
     } else {
-      const m = addModule(courseId, moduleTitle);
+      const m = addModule(course.id, moduleTitle.trim());
       setExpandedModule(m.id);
-      toast.success('Модуль добавлен');
     }
     setModuleDialogOpen(false);
   };
 
-  const handleAddLesson = (moduleId: string) => {
+  const openLessonDialog = (moduleId: string, lesson: Lesson | null) => {
     setLessonModuleId(moduleId);
-    setLessonEditId(null);
-    setLessonTitle('');
-    setLessonType('video');
-    setLessonContent('');
+    setEditingLesson(lesson);
     setLessonDialogOpen(true);
   };
 
-  const handleEditLesson = (moduleId: string, lesson: Lesson) => {
-    setLessonModuleId(moduleId);
-    setLessonEditId(lesson.id);
-    setLessonTitle(lesson.title);
-    setLessonType(lesson.type);
-    setLessonContent(typeof lesson.content?.data === 'object' ? (lesson.content.data.url || lesson.content.data.html || lesson.content.data.instructions || '') : '');
-    setLessonDialogOpen(true);
-  };
-
-  const submitLesson = () => {
-    if (!lessonTitle.trim() || !lessonModuleId || !courseId) return;
-    let content;
-    if (lessonType === 'video') {
-      content = { type: 'video' as const, data: { url: lessonContent } };
-    } else if (lessonType === 'text') {
-      content = { type: 'text' as const, data: { html: lessonContent } };
-    } else if (lessonType === 'homework') {
-      content = { type: 'homework' as const, data: { instructions: lessonContent, deadline: new Date(Date.now() + 7 * 86400000).toISOString() } };
+  const saveLesson = (draft: LessonDraft) => {
+    if (!course || !lessonModuleId) return;
+    const content = { type: draft.type, data: draft.data };
+    if (editingLesson) {
+      updateLesson(course.id, lessonModuleId, editingLesson.id, { title: draft.title, type: draft.type, content });
+      toast.success('Урок сохранён');
     } else {
-      content = { type: lessonType, data: { description: lessonContent } };
-    }
-
-    if (lessonEditId) {
-      updateLesson(courseId, lessonModuleId, lessonEditId, { title: lessonTitle, type: lessonType, content });
-      toast.success('Урок обновлён');
-    } else {
-      addLesson(courseId, lessonModuleId, { title: lessonTitle, type: lessonType, content });
+      addLesson(course.id, lessonModuleId, { title: draft.title, type: draft.type, content });
       toast.success('Урок добавлен');
     }
     setLessonDialogOpen(false);
   };
 
   const handleDeleteCourse = () => {
-    if (!courseId) return;
-    deleteCourse(courseId);
+    if (!course) return;
+    deleteCourse(course.id);
     toast.success('Курс удалён');
     navigate('/author/courses');
   };
@@ -174,259 +241,168 @@ export function AuthorCourseBuilder() {
         <Card className="border-0">
           <CardContent className="p-12 text-center">
             <h2 className="text-[24px] font-bold mb-3" style={{ fontFamily: 'var(--font-heading)' }}>Курс не найден</h2>
-            <Link to="/author/courses">
-              <Button>← К списку курсов</Button>
-            </Link>
+            <Link to="/author/courses"><Button>← К списку курсов</Button></Link>
           </CardContent>
         </Card>
       </div>
     );
   }
 
+  const studentsCount = course ? enrollmentRecords.filter(e => e.courseId === course.id && e.status !== 'revoked').length : 0;
+  const firstLesson = course?.modules.flatMap(m => m.lessons)[0];
+
   return (
-    <div className="p-6 max-w-6xl mx-auto">
-      {/* Header */}
+    <div className="p-4 sm:p-6 max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 min-w-0">
           <Link to="/author/courses">
-            <Button variant="ghost" size="icon">
-              <ArrowLeft className="w-4 h-4" />
-            </Button>
+            <Button variant="ghost" size="icon" aria-label="Назад"><ArrowLeft className="w-4 h-4" /></Button>
           </Link>
-          <div>
-            <h1 className="text-[24px] font-bold text-[#1A1A2E]" style={{ fontFamily: 'var(--font-heading)' }}>
-              {isNew && !courseId ? 'Новый курс' : title || 'Без названия'}
+          <div className="min-w-0">
+            <h1 className="text-[22px] sm:text-[24px] font-bold text-[#1A1A2E] truncate" style={{ fontFamily: 'var(--font-heading)' }}>
+              {course?.title || 'Новый курс'}
             </h1>
             <p className="text-[13px] text-[#8A8A9A]" style={{ fontFamily: 'var(--font-body)' }}>
-              {isNew && !courseId ? 'Создайте свой первый курс' : 'Редактирование курса'}
+              {course ? `${course.modules.length} модулей · ${course.modules.reduce((s, m) => s + m.lessons.length, 0)} уроков · ${studentsCount} учеников` : 'Название, описание и доступ'}
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Badge variant={status === 'published' ? 'success' : 'secondary'}>
-            {status === 'published' ? 'Опубликован' : 'Черновик'}
-          </Badge>
-          {courseId && (
-            <Button variant="outline" size="sm" onClick={() => setDeleteCourseOpen(true)}>
-              <Trash2 className="w-4 h-4 mr-1" />Удалить
+        {course && (
+          <div className="flex items-center gap-2">
+            <Badge variant={course.status === 'published' ? 'success' : 'secondary'}>
+              {course.status === 'published' ? 'Опубликован' : 'Черновик'}
+            </Badge>
+            {firstLesson && (
+              <Link to={`/author/courses/${course.id}/preview/${firstLesson.id}`}>
+                <Button variant="outline" size="sm"><Eye className="w-4 h-4 mr-1" />Как видит ученик</Button>
+              </Link>
+            )}
+            <Button variant="outline" size="sm" onClick={() => setDeleteCourseOpen(true)} aria-label="Удалить курс">
+              <Trash2 className="w-4 h-4" />
             </Button>
-          )}
-          <Button onClick={handleSaveCourse} className="transition-transform active:scale-[0.98]">
-            <Save className="w-4 h-4 mr-2" />Сохранить
-          </Button>
-        </div>
+          </div>
+        )}
       </div>
 
-      <Tabs defaultValue="content" className="space-y-4">
+      <Tabs value={tab} onValueChange={setTab} className="space-y-4">
         <TabsList className="bg-white border-0 p-1 rounded-xl">
-          <TabsTrigger value="content" className="rounded-lg">Содержимое</TabsTrigger>
+          <TabsTrigger value="content" className="rounded-lg" disabled={!course}>Содержимое</TabsTrigger>
           <TabsTrigger value="settings" className="rounded-lg">Настройки</TabsTrigger>
+          <TabsTrigger value="access" className="rounded-lg" disabled={!course}>
+            <Users className="w-3.5 h-3.5 mr-1.5" />Ученики и доступ
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="content" className="space-y-4">
-          {!courseId ? (
+          {course && course.modules.length === 0 ? (
             <Card className="border-0">
               <CardContent className="p-12 text-center">
-                <p className="text-[13px] text-[#8A8A9A] mb-4" style={{ fontFamily: 'var(--font-body)' }}>
-                  Сначала сохраните курс (введите название и нажмите "Сохранить")
+                <BookOpen className="w-12 h-12 text-[#8A8A9A] mx-auto mb-4" strokeWidth={1.5} />
+                <h3 className="text-[18px] font-semibold text-[#1A1A2E] mb-2" style={{ fontFamily: 'var(--font-heading)' }}>Добавьте первый модуль</h3>
+                <p className="text-[13px] text-[#8A8A9A] mb-6" style={{ fontFamily: 'var(--font-body)' }}>
+                  Модуль — это раздел курса. Внутри него будут уроки: видео, тексты, задания и тесты.
                 </p>
+                <Button onClick={() => openModuleDialog(null)}><Plus className="w-4 h-4 mr-2" />Добавить модуль</Button>
               </CardContent>
             </Card>
-          ) : (
-            <>
-              {course?.modules.length === 0 ? (
-                <Card className="border-0">
-                  <CardContent className="p-12 text-center">
-                    <BookOpen className="w-12 h-12 text-[#8A8A9A] mx-auto mb-4" strokeWidth={1.5} />
-                    <h3 className="text-[18px] font-semibold text-[#1A1A2E] mb-2" style={{ fontFamily: 'var(--font-heading)' }}>
-                      Нет модулей
-                    </h3>
-                    <p className="text-[13px] text-[#8A8A9A] mb-6" style={{ fontFamily: 'var(--font-body)' }}>
-                      Добавьте первый модуль чтобы начать
-                    </p>
-                    <Button onClick={handleAddModule}>
-                      <Plus className="w-4 h-4 mr-2" />Добавить модуль
-                    </Button>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="space-y-3">
-                  {course?.modules.map((module, mIndex) => {
-                    const expanded = expandedModule === module.id;
-                    return (
-                      <Card key={module.id} className="border-0 overflow-hidden">
-                        <CardContent className="p-0">
-                          <div className="flex items-center gap-3 p-4 hover:bg-[#F5F4F2]/50 transition-colors">
-                            <span className="w-8 h-8 rounded-lg bg-[#EDE9FF] text-[#7C6AF7] text-xs font-semibold flex items-center justify-center" style={{ fontFamily: 'var(--font-heading)' }}>
-                              {mIndex + 1}
-                            </span>
-                            <div className="flex-1">
-                              <h3 className="text-[14px] font-semibold text-[#1A1A2E]" style={{ fontFamily: 'var(--font-heading)' }}>
-                                {module.title}
-                              </h3>
-                              <p className="text-[12px] text-[#8A8A9A]" style={{ fontFamily: 'var(--font-body)' }}>
-                                {module.lessons.length} {module.lessons.length === 1 ? 'урок' : 'уроков'}
-                              </p>
-                            </div>
-                            <Button variant="ghost" size="icon" onClick={() => handleEditModule(module.id, module.title)}>
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" onClick={() => setDeleteModuleId(module.id)}>
-                              <Trash2 className="w-4 h-4 text-[#FF6B6B]" />
-                            </Button>
-                            <Button variant="ghost" size="icon" onClick={() => setExpandedModule(expanded ? null : module.id)}>
-                              {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                            </Button>
-                          </div>
+          ) : course && (
+            <div className="space-y-3">
+              {course.modules.map((module, mIndex) => {
+                const expanded = expandedModule === module.id;
+                return (
+                  <Card key={module.id} className="border-0 overflow-hidden">
+                    <CardContent className="p-0">
+                      <div className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4">
+                        <span className="w-8 h-8 shrink-0 rounded-lg bg-[#EDE9FF] text-[#7C6AF7] text-xs font-semibold flex items-center justify-center">{mIndex + 1}</span>
+                        <button type="button" className="flex-1 min-w-0 text-left" onClick={() => setExpandedModule(expanded ? '' : module.id)}>
+                          <h3 className="text-[14px] font-semibold text-[#1A1A2E] truncate" style={{ fontFamily: 'var(--font-heading)' }}>{module.title}</h3>
+                          <p className="text-[12px] text-[#8A8A9A]">{module.lessons.length} уроков</p>
+                        </button>
+                        <Button variant="ghost" size="icon" aria-label="Выше" disabled={mIndex === 0} onClick={() => moveModule(course.id, module.id, -1)}><ArrowUp className="w-4 h-4" /></Button>
+                        <Button variant="ghost" size="icon" aria-label="Ниже" disabled={mIndex === course.modules.length - 1} onClick={() => moveModule(course.id, module.id, 1)}><ArrowDown className="w-4 h-4" /></Button>
+                        <Button variant="ghost" size="icon" aria-label="Переименовать" onClick={() => openModuleDialog(module.id, module.title)}><Edit className="w-4 h-4" /></Button>
+                        <Button variant="ghost" size="icon" aria-label="Удалить модуль" onClick={() => setDeleteModuleId(module.id)}><Trash2 className="w-4 h-4 text-[#FF6B6B]" /></Button>
+                        <Button variant="ghost" size="icon" aria-label="Развернуть" onClick={() => setExpandedModule(expanded ? '' : module.id)}>
+                          {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                        </Button>
+                      </div>
 
-                          {expanded && (
-                            <div className="border-t border-[#1A1A2E]/5 bg-[#F5F4F2]/30">
-                              {module.lessons.map((lesson, lIndex) => {
-                                const Icon = lessonIcons[lesson.type] || FileText;
-                                return (
-                                  <div key={lesson.id} className="flex items-center gap-3 px-4 py-3 hover:bg-white transition-colors border-b border-[#1A1A2E]/5 last:border-0">
-                                    <span className="text-[12px] text-[#8A8A9A] w-6" style={{ fontFamily: 'var(--font-body)' }}>
-                                      {mIndex + 1}.{lIndex + 1}
-                                    </span>
-                                    <div className="w-7 h-7 rounded-lg bg-white flex items-center justify-center">
-                                      <Icon className="w-4 h-4 text-[#7C6AF7]" strokeWidth={1.5} />
-                                    </div>
-                                    <div className="flex-1">
-                                      <p className="text-[13px] font-medium text-[#1A1A2E]" style={{ fontFamily: 'var(--font-body)' }}>
-                                        {lesson.title}
-                                      </p>
-                                      <p className="text-[11px] text-[#8A8A9A]" style={{ fontFamily: 'var(--font-body)' }}>
-                                        {lessonLabels[lesson.type]}
-                                      </p>
-                                    </div>
-                                    <Button variant="ghost" size="icon" onClick={() => handleEditLesson(module.id, lesson)}>
-                                      <Edit className="w-3.5 h-3.5" />
-                                    </Button>
-                                    <Button variant="ghost" size="icon" onClick={() => setDeleteLessonInfo({ moduleId: module.id, lessonId: lesson.id })}>
-                                      <Trash2 className="w-3.5 h-3.5 text-[#FF6B6B]" />
-                                    </Button>
-                                  </div>
-                                );
-                              })}
-                              <div className="p-3">
-                                <Button variant="outline" size="sm" className="w-full" onClick={() => handleAddLesson(module.id)}>
-                                  <Plus className="w-4 h-4 mr-2" />Добавить урок
+                      {expanded && (
+                        <div className="border-t border-[#1A1A2E]/5 bg-[#F5F4F2]/30">
+                          {module.lessons.map((lesson, lIndex) => {
+                            const Icon = lessonIcons[lesson.type] || FileText;
+                            return (
+                              <div key={lesson.id} className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-3 hover:bg-white transition-colors border-b border-[#1A1A2E]/5 last:border-0">
+                                <span className="text-[12px] text-[#8A8A9A] w-8 shrink-0">{mIndex + 1}.{lIndex + 1}</span>
+                                <div className="w-7 h-7 shrink-0 rounded-lg bg-white flex items-center justify-center">
+                                  <Icon className="w-4 h-4 text-[#7C6AF7]" strokeWidth={1.5} />
+                                </div>
+                                <button type="button" className="flex-1 min-w-0 text-left" onClick={() => openLessonDialog(module.id, lesson)}>
+                                  <p className="text-[13px] font-medium text-[#1A1A2E] truncate">{lesson.title}</p>
+                                  <p className="text-[11px] text-[#8A8A9A]">{LESSON_TYPE_LABELS[lesson.type]}</p>
+                                </button>
+                                <Button variant="ghost" size="icon" aria-label="Выше" disabled={lIndex === 0} onClick={() => moveLesson(course.id, module.id, lesson.id, -1)}><ArrowUp className="w-3.5 h-3.5" /></Button>
+                                <Button variant="ghost" size="icon" aria-label="Ниже" disabled={lIndex === module.lessons.length - 1} onClick={() => moveLesson(course.id, module.id, lesson.id, 1)}><ArrowDown className="w-3.5 h-3.5" /></Button>
+                                <Button variant="ghost" size="icon" aria-label="Удалить урок" onClick={() => setDeleteLessonInfo({ moduleId: module.id, lessonId: lesson.id })}>
+                                  <Trash2 className="w-3.5 h-3.5 text-[#FF6B6B]" />
                                 </Button>
                               </div>
-                            </div>
-                          )}
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                  <Button variant="outline" className="w-full" onClick={handleAddModule}>
-                    <Plus className="w-4 h-4 mr-2" />Добавить модуль
-                  </Button>
-                </div>
-              )}
-            </>
+                            );
+                          })}
+                          <div className="p-3">
+                            <Button variant="outline" size="sm" className="w-full" onClick={() => openLessonDialog(module.id, null)}>
+                              <Plus className="w-4 h-4 mr-2" />Добавить урок
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+              <Button variant="outline" className="w-full" onClick={() => openModuleDialog(null)}>
+                <Plus className="w-4 h-4 mr-2" />Добавить модуль
+              </Button>
+            </div>
           )}
         </TabsContent>
 
         <TabsContent value="settings">
-          <Card className="border-0">
-            <CardContent className="p-6 space-y-4">
-              <div>
-                <Label htmlFor="title">Название курса</Label>
-                <Input id="title" value={title} onChange={e => setTitle(e.target.value)} placeholder="Например: Основы UI/UX" className="mt-1.5" />
-              </div>
-              <div>
-                <Label htmlFor="description">Описание</Label>
-                <Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} placeholder="Кратко опишите ваш курс" rows={4} className="mt-1.5" />
-              </div>
-              <div>
-                <Label htmlFor="cover">Обложка (URL картинки)</Label>
-                <Input id="cover" value={cover} onChange={e => setCover(e.target.value)} placeholder="https://..." className="mt-1.5" />
-              </div>
-              <div>
-                <Label>Статус</Label>
-                <Select value={status} onValueChange={(v: 'draft' | 'published') => setStatus(v)}>
-                  <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="draft">Черновик</SelectItem>
-                    <SelectItem value="published">Опубликован</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <Button onClick={handleSaveCourse} className="w-full">
-                <Save className="w-4 h-4 mr-2" />Сохранить настройки
-              </Button>
-            </CardContent>
-          </Card>
+          <CourseSettings course={course} onSaved={handleSettingsSaved} />
+        </TabsContent>
+
+        <TabsContent value="access">
+          {course && <CourseAccessPanel course={course} />}
         </TabsContent>
       </Tabs>
 
-      {/* Module Dialog */}
       <Dialog open={moduleDialogOpen} onOpenChange={setModuleDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>{moduleEditId ? 'Редактировать модуль' : 'Новый модуль'}</DialogTitle>
+            <DialogTitle>{moduleEditId ? 'Переименовать модуль' : 'Новый модуль'}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-2">
+          <form onSubmit={e => { e.preventDefault(); submitModule(); }} className="space-y-4 py-2">
             <div>
               <Label htmlFor="module-title">Название</Label>
               <Input id="module-title" value={moduleTitle} onChange={e => setModuleTitle(e.target.value)} placeholder="Например: Введение" autoFocus className="mt-1.5" />
             </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setModuleDialogOpen(false)}>Отмена</Button>
-            <Button onClick={submitModule}>{moduleEditId ? 'Сохранить' : 'Добавить'}</Button>
-          </DialogFooter>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setModuleDialogOpen(false)}>Отмена</Button>
+              <Button type="submit">{moduleEditId ? 'Сохранить' : 'Добавить'}</Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
 
-      {/* Lesson Dialog */}
-      <Dialog open={lessonDialogOpen} onOpenChange={setLessonDialogOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>{lessonEditId ? 'Редактировать урок' : 'Новый урок'}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div>
-              <Label htmlFor="lesson-title">Название</Label>
-              <Input id="lesson-title" value={lessonTitle} onChange={e => setLessonTitle(e.target.value)} placeholder="Название урока" autoFocus className="mt-1.5" />
-            </div>
-            <div>
-              <Label>Тип урока</Label>
-              <Select value={lessonType} onValueChange={(v: Lesson['type']) => setLessonType(v)}>
-                <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="video">Видео</SelectItem>
-                  <SelectItem value="text">Текст</SelectItem>
-                  <SelectItem value="homework">Домашка</SelectItem>
-                  <SelectItem value="quiz">Тест</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="lesson-content">
-                {lessonType === 'video' ? 'YouTube embed URL' : lessonType === 'text' ? 'HTML контент' : 'Содержимое'}
-              </Label>
-              {lessonType === 'video' ? (
-                <Input id="lesson-content" value={lessonContent} onChange={e => setLessonContent(e.target.value)} placeholder="https://www.youtube.com/embed/..." className="mt-1.5" />
-              ) : (
-                <Textarea id="lesson-content" value={lessonContent} onChange={e => setLessonContent(e.target.value)} rows={6} placeholder={lessonType === 'text' ? '<p>Ваш контент...</p>' : 'Инструкции к заданию'} className="mt-1.5" />
-              )}
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setLessonDialogOpen(false)}>Отмена</Button>
-            <Button onClick={submitLesson}>{lessonEditId ? 'Сохранить' : 'Добавить'}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {course && (
+        <LessonEditorDialog open={lessonDialogOpen} onOpenChange={setLessonDialogOpen} courseId={course.id} initial={editingLesson} onSave={saveLesson} />
+      )}
 
-      {/* Delete confirmations */}
       <AlertDialog open={deleteCourseOpen} onOpenChange={setDeleteCourseOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Удалить курс?</AlertDialogTitle>
-            <AlertDialogDescription>Это действие нельзя отменить. Все модули, уроки и записи учеников будут удалены.</AlertDialogDescription>
+            <AlertDialogDescription>Это действие нельзя отменить. Модули, уроки, записи учеников и их прогресс будут удалены.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Отмена</AlertDialogCancel>
@@ -435,31 +411,32 @@ export function AuthorCourseBuilder() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog open={!!deleteModuleId} onOpenChange={(o) => !o && setDeleteModuleId(null)}>
+      <AlertDialog open={!!deleteModuleId} onOpenChange={o => !o && setDeleteModuleId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Удалить модуль?</AlertDialogTitle>
-            <AlertDialogDescription>Все уроки модуля будут удалены.</AlertDialogDescription>
+            <AlertDialogDescription>Все уроки модуля и прогресс учеников по ним будут удалены.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Отмена</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => { if (courseId && deleteModuleId) { deleteModule(courseId, deleteModuleId); toast.success('Модуль удалён'); setDeleteModuleId(null); } }}
+              onClick={() => { if (course && deleteModuleId) { deleteModule(course.id, deleteModuleId); setDeleteModuleId(null); } }}
               className="bg-[#FF6B6B] hover:bg-[#E55555]"
             >Удалить</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog open={!!deleteLessonInfo} onOpenChange={(o) => !o && setDeleteLessonInfo(null)}>
+      <AlertDialog open={!!deleteLessonInfo} onOpenChange={o => !o && setDeleteLessonInfo(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Удалить урок?</AlertDialogTitle>
+            <AlertDialogDescription>Прогресс и домашние задания учеников по этому уроку будут удалены.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Отмена</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => { if (courseId && deleteLessonInfo) { deleteLesson(courseId, deleteLessonInfo.moduleId, deleteLessonInfo.lessonId); toast.success('Урок удалён'); setDeleteLessonInfo(null); } }}
+              onClick={() => { if (course && deleteLessonInfo) { deleteLesson(course.id, deleteLessonInfo.moduleId, deleteLessonInfo.lessonId); setDeleteLessonInfo(null); } }}
               className="bg-[#FF6B6B] hover:bg-[#E55555]"
             >Удалить</AlertDialogAction>
           </AlertDialogFooter>
