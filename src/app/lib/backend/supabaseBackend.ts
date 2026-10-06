@@ -1,8 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type {
-  ChatMessage, Course, Enrollment, Homework, Invite, Lesson, LessonProgressRow, User,
+  AppNotification, ChatMessage, Course, Enrollment, Homework, Invite, Lesson, LessonProgressRow, QuizKey, QuizResult, User,
 } from '../../types';
-import { assembleCourses, type Backend, type CourseMeta, type FileBucket, type ModuleMeta } from './types';
+import { assembleCourses, stripQuizAnswers, type Backend, type CourseMeta, type FileBucket, type ModuleMeta } from './types';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type Row = Record<string, any>;
@@ -40,6 +40,13 @@ const toHomework = (r: Row): Homework => ({
 const toMessage = (r: Row): ChatMessage => ({
   id: r.id, fromUserId: r.from_id, toUserId: r.to_id, content: r.content, createdAt: r.created_at, read: r.read,
 });
+const toQuizKey = (r: Row): QuizKey => ({
+  lessonId: r.lesson_id, courseId: r.course_id, answers: r.answers ?? {}, passPercent: r.pass_percent,
+});
+const toNotification = (r: Row): AppNotification => ({
+  id: r.id, userId: r.user_id, type: r.type, title: r.title, body: r.body ?? undefined, link: r.link ?? undefined,
+  read: r.read, createdAt: r.created_at,
+});
 export const toUser = (r: Row): User => ({
   id: r.id, name: r.name, email: r.email, role: r.role, avatar: r.avatar ?? undefined, schoolId: r.school_id ?? undefined,
 });
@@ -52,7 +59,7 @@ function check<T>(res: { data: T | null; error: { message: string } | null }): T
 export function createSupabaseBackend(sb: SupabaseClient): Backend {
   return {
     async load() {
-      const [courses, modules, lessons, enrollments, progress, homework, messages, profiles, invites] = await Promise.all([
+      const [courses, modules, lessons, enrollments, progress, homework, messages, profiles, invites, quizKeys, notifications] = await Promise.all([
         sb.from('courses').select('*').order('created_at'),
         sb.from('modules').select('*'),
         sb.from('lessons').select('*'),
@@ -62,6 +69,8 @@ export function createSupabaseBackend(sb: SupabaseClient): Backend {
         sb.from('messages').select('*').order('created_at'),
         sb.from('profiles').select('*'),
         sb.from('invites').select('*').order('created_at'),
+        sb.from('quiz_keys').select('*'),
+        sb.from('notifications').select('*').order('created_at', { ascending: false }).limit(100),
       ]);
       return {
         courses: assembleCourses(
@@ -75,6 +84,8 @@ export function createSupabaseBackend(sb: SupabaseClient): Backend {
         messages: check(messages).map(toMessage),
         users: check(profiles).map(toUser),
         invites: check(invites).map(toInvite),
+        quizKeys: check(quizKeys).map(toQuizKey),
+        notifications: check(notifications).map(toNotification),
       };
     },
 
@@ -86,7 +97,8 @@ export function createSupabaseBackend(sb: SupabaseClient): Backend {
       }));
     },
     async deleteModule(id) { check(await sb.from('modules').delete().eq('id', id)); },
-    async saveLesson(l, courseId) {
+    async saveLesson(lesson, courseId) {
+      const l = stripQuizAnswers(lesson);
       check(await sb.from('lessons').upsert({
         id: l.id, module_id: l.moduleId, course_id: courseId, title: l.title, description: l.description ?? null,
         position: l.order, type: l.type, content: l.content?.data ?? {}, is_locked: l.isLocked,
@@ -131,6 +143,19 @@ export function createSupabaseBackend(sb: SupabaseClient): Backend {
         check(await sb.from('lesson_progress').delete().eq('user_id', row.userId).eq('lesson_id', row.lessonId));
       }
     },
+    async saveQuizKey(k) {
+      check(await sb.from('quiz_keys').upsert({
+        lesson_id: k.lessonId, course_id: k.courseId, answers: k.answers, pass_percent: k.passPercent,
+      }));
+    },
+    async submitQuiz(lessonId, answers) {
+      return check(await sb.rpc('submit_quiz', { p_lesson: lessonId, p_answers: answers })) as QuizResult;
+    },
+    async markNotificationsRead(ids) {
+      if (!ids.length) return;
+      check(await sb.from('notifications').update({ read: true }).in('id', ids));
+    },
+
     async saveHomework(h) {
       check(await sb.from('homework').upsert({
         id: h.id, lesson_id: h.lessonId, course_id: h.courseId, student_id: h.studentId, title: h.title,

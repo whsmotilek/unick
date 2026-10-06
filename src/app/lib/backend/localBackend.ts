@@ -1,9 +1,10 @@
 import type {
-  ChatMessage, Course, Enrollment, Homework, Invite, Lesson, LessonProgressRow, User,
+  AppNotification, ChatMessage, Course, Enrollment, Homework, Invite, Lesson, LessonProgressRow, QuizKey, QuizResult, User,
 } from '../../types';
 import { seedChats, seedCourses, seedEnrollments, seedHomework, seedProgress } from '../../store/seed';
 import { mockUsers } from '../../data/mockData';
-import { assembleCourses, type Backend, type CourseMeta, type ModuleMeta } from './types';
+import { assembleCourses, stripQuizAnswers, type Backend, type CourseMeta, type ModuleMeta } from './types';
+import { gradeQuiz } from '../lessonContent';
 
 /**
  * Демо-бэкенд: все данные в localStorage этого браузера.
@@ -23,6 +24,8 @@ interface DemoDb {
   homework: Homework[];
   messages: ChatMessage[];
   invites: Invite[];
+  quizKeys: QuizKey[];
+  notifications: AppNotification[];
 }
 
 function seedDb(): DemoDb {
@@ -48,6 +51,8 @@ function seedDb(): DemoDb {
     homework: seedHomework,
     messages: Object.values(seedChats).flat(),
     invites: [{ id: 'inv-demo', courseId: 'course-1', code: 'demo', label: 'Демо-приглашение', uses: 0, active: true, createdAt: now }],
+    quizKeys: [],
+    notifications: [],
   };
 }
 
@@ -90,12 +95,29 @@ export function createLocalBackend(currentUser: () => User | null): Backend {
     if (!u) throw new Error('Нужно войти в аккаунт');
     return u;
   };
+  const userById = (id: string) => getDemoUsers().find(u => u.id === id);
+  const courseById = (id: string) => db.courses.find(c => c.id === id);
+  const staffOf = (schoolId: string) => getDemoUsers().filter(u => u.schoolId === schoolId && (u.role === 'author' || u.role === 'curator'));
+  const isStaff = (u: User, courseId: string) => u.role === 'admin' || (!!u.schoolId && courseById(courseId)?.schoolId === u.schoolId);
+
+  /** Те же уведомления, что создают триггеры в Supabase */
+  const notify = (userId: string, type: string, title: string, body: string, link: string) => {
+    const n: AppNotification = { id: crypto.randomUUID(), userId, type, title, body, link, read: false, createdAt: new Date().toISOString() };
+    db = { ...db, notifications: [n, ...db.notifications].slice(0, 300) };
+  };
+
   const enroll = (courseId: string, userId: string, source: Enrollment['source'], inviteId?: string) => {
     if (db.enrollments.some(e => e.courseId === courseId && e.userId === userId && e.status !== 'revoked')) return;
     const existing = db.enrollments.find(e => e.courseId === courseId && e.userId === userId);
     const row: Enrollment = existing
       ? { ...existing, status: 'active' }
       : { id: crypto.randomUUID(), courseId, userId, status: 'active', source, inviteId, createdAt: new Date().toISOString() };
+    if (!existing) {
+      const course = courseById(courseId);
+      for (const s of course ? staffOf(course.schoolId).filter(u => u.role === 'author') : []) {
+        notify(s.id, 'student_enrolled', 'Новый ученик', `${userById(userId)?.name ?? 'Ученик'} · ${course!.title}`, `/author/courses/${courseId}?tab=access`);
+      }
+    }
     commit({ ...db, enrollments: upsert(db.enrollments, row, e => e.id === row.id) });
   };
 
@@ -110,6 +132,8 @@ export function createLocalBackend(currentUser: () => User | null): Backend {
         messages: db.messages,
         users: getDemoUsers(),
         invites: db.invites,
+        quizKeys: db.quizKeys.filter(k => { const u = currentUser(); return !!u && isStaff(u, k.courseId); }),
+        notifications: db.notifications.filter(n => n.userId === currentUser()?.id),
       };
     },
 
@@ -135,11 +159,16 @@ export function createLocalBackend(currentUser: () => User | null): Backend {
       commit({ ...db, modules: db.modules.filter(m => m.id !== id), lessons: db.lessons.filter(l => l.moduleId !== id) });
     },
     async saveLesson(l, courseId) {
-      commit({ ...db, lessons: upsert(db.lessons, { ...l, courseId }, x => x.id === l.id) });
+      const clean = stripQuizAnswers(l);
+      commit({ ...db, lessons: upsert(db.lessons, { ...clean, courseId }, x => x.id === l.id) });
     },
     async deleteLesson(id) { commit({ ...db, lessons: db.lessons.filter(l => l.id !== id) }); },
 
     async saveEnrollment(e) {
+      if (!db.enrollments.some(x => x.courseId === e.courseId && x.userId === e.userId)) {
+        enroll(e.courseId, e.userId, e.source);
+        return;
+      }
       commit({ ...db, enrollments: upsert(db.enrollments, e, x => x.courseId === e.courseId && x.userId === e.userId) });
     },
     async deleteEnrollment(courseId, userId) {
@@ -192,6 +221,17 @@ export function createLocalBackend(currentUser: () => User | null): Backend {
       commit({ ...db, progress: done ? [...rest, row] : rest });
     },
     async saveHomework(h) {
+      const prev = db.homework.find(x => x.lessonId === h.lessonId && x.studentId === h.studentId);
+      const course = courseById(h.courseId);
+      if (course && h.status === 'submitted' && (!prev || prev.status !== 'submitted' || prev.submittedAt !== h.submittedAt)) {
+        for (const s of staffOf(course.schoolId)) {
+          notify(s.id, 'homework_submitted', 'Новое домашнее задание', `${userById(h.studentId)?.name ?? 'Ученик'} · ${h.title} · ${course.title}`,
+            s.role === 'curator' ? '/curator' : '/author/homework');
+        }
+      } else if (course && prev && prev.status !== h.status && (h.status === 'approved' || h.status === 'returned')) {
+        notify(h.studentId, 'homework_reviewed', h.status === 'approved' ? 'Домашнее задание принято' : 'Задание вернули на доработку',
+          `${h.title} · ${course.title}`, `/student/courses/${h.courseId}/lesson/${h.lessonId}`);
+      }
       const progress = db.progress.filter(p => !(p.userId === h.studentId && p.lessonId === h.lessonId));
       if (h.status === 'approved') progress.push({ userId: h.studentId, courseId: h.courseId, lessonId: h.lessonId, completedAt: new Date().toISOString() });
       const keepOld = h.status !== 'approved' && h.status !== 'returned';
@@ -202,9 +242,44 @@ export function createLocalBackend(currentUser: () => User | null): Backend {
       });
     },
 
-    async sendMessage(m) { commit({ ...db, messages: [...db.messages, m] }); },
+    async sendMessage(m) {
+      const dup = db.notifications.some(n => n.userId === m.toUserId && n.type === 'message' && !n.read && n.link?.endsWith(m.fromUserId));
+      if (!dup) {
+        const to = userById(m.toUserId);
+        const home = to?.role === 'author' ? '/author/chat?with=' : to?.role === 'student' ? '/student/chat?with=' : '/curator?with=';
+        notify(m.toUserId, 'message', 'Новое сообщение', `${userById(m.fromUserId)?.name ?? 'Пользователь'}: ${m.content.slice(0, 120)}`, home + m.fromUserId);
+      }
+      commit({ ...db, messages: [...db.messages, m] });
+    },
     async markRead(userId, withUserId) {
       commit({ ...db, messages: db.messages.map(m => m.toUserId === userId && m.fromUserId === withUserId ? { ...m, read: true } : m) });
+    },
+
+    async saveQuizKey(k) {
+      commit({ ...db, quizKeys: upsert(db.quizKeys, k, x => x.lessonId === k.lessonId) });
+    },
+    async submitQuiz(lessonId, answers): Promise<QuizResult> {
+      const user = me();
+      const lesson = db.lessons.find(l => l.id === lessonId && l.type === 'quiz');
+      if (!lesson) throw new Error('Тест не найден');
+      const enrolled = db.enrollments.some(e => e.courseId === lesson.courseId && e.userId === user.id && e.status !== 'revoked');
+      if (!enrolled && !isStaff(user, lesson.courseId)) throw new Error('Нет доступа к курсу');
+      const key = db.quizKeys.find(k => k.lessonId === lessonId);
+      if (!key) throw new Error('Автор ещё не настроил ответы к тесту');
+      const questions = Object.entries(key.answers).map(([id, correct]) => ({ id, text: '', options: [], correct }));
+      const r = gradeQuiz(questions, answers);
+      const passed = r.percent >= key.passPercent;
+      const wrong = questions
+        .filter(q => [...(answers[q.id] ?? [])].sort().join('|') !== [...q.correct].sort().join('|') || !(answers[q.id] ?? []).length)
+        .map(q => q.id);
+      if (enrolled && passed && !db.progress.some(p => p.userId === user.id && p.lessonId === lessonId)) {
+        commit({ ...db, progress: [...db.progress, { userId: user.id, courseId: lesson.courseId, lessonId, completedAt: new Date().toISOString() }] });
+      }
+      return { ...r, passed, passPercent: key.passPercent, wrong, key: passed ? key.answers : null };
+    },
+    async markNotificationsRead(ids) {
+      const set = new Set(ids);
+      commit({ ...db, notifications: db.notifications.map(n => (set.has(n.id) ? { ...n, read: true } : n)) });
     },
 
     async uploadFile(_bucket, _path, file) {

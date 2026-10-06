@@ -119,6 +119,43 @@ insert into lesson_progress (user_id, course_id, lesson_id) values (auth.uid(), 
 insert into lesson_progress (user_id, course_id, lesson_id) values (auth.uid(), '10000000-0000-0000-0000-000000000001', '30000000-0000-0000-0000-000000000004');
 select pg_temp.check((select count(*) from lesson_progress where user_id = auth.uid()) = 4, 'последовательный курс: уроки по порядку отмечаются');
 
+-- ===== Тесты с проверкой на сервере =====
+select pg_temp.login('00000000-0000-0000-0000-00000000000a');
+update courses set sequential = false where id = '10000000-0000-0000-0000-000000000001';
+insert into lessons (id, module_id, course_id, title, type, position, content) values
+ ('30000000-0000-0000-0000-000000000005', '20000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', 'Тест', 'quiz', 5,
+  '{"questions":[{"id":"q1","text":"2+2","options":[{"id":"a","text":"4"},{"id":"b","text":"5"}],"correct":["a"]},{"id":"q2","text":"Цвета","options":[{"id":"r","text":"красный"},{"id":"g","text":"зелёный"},{"id":"s","text":"стол"}],"correct":["r","g"]}]}');
+insert into quiz_keys (lesson_id, course_id, answers, pass_percent) values
+ ('30000000-0000-0000-0000-000000000005', '10000000-0000-0000-0000-000000000001', '{"q1":["a"],"q2":["r","g"]}', 100);
+select pg_temp.check((select content->'questions'->0 ? 'correct' from lessons where id = '30000000-0000-0000-0000-000000000005') = false, 'правильные ответы вырезаются из урока');
+select pg_temp.check((select count(*) from notifications where type = 'student_enrolled') = 2, 'автору пришли уведомления о новых учениках');
+select pg_temp.check((select count(*) from notifications where type = 'homework_submitted') = 1, 'автору пришло уведомление о сданном ДЗ');
+
+select pg_temp.login('00000000-0000-0000-0000-00000000000c');
+select pg_temp.check((select count(*) from quiz_keys) = 0, 'ученик не видит ключи теста');
+do $$ begin
+  insert into lesson_progress (user_id, course_id, lesson_id) values (auth.uid(), '10000000-0000-0000-0000-000000000001', '30000000-0000-0000-0000-000000000005');
+  raise exception 'FAIL: ученик сам засчитал тест';
+exception when raise_exception then if sqlerrm like 'FAIL%' then raise; end if; raise notice 'ok  тест нельзя засчитать в обход проверки'; end $$;
+select pg_temp.check(
+  (select (r->>'passed')::boolean = false and r->'key' = 'null'::jsonb and r->'wrong' = '["q2"]'::jsonb
+   from (select submit_quiz('30000000-0000-0000-0000-000000000005', '{"q1":["a"],"q2":["r"]}') r) t),
+  'неверный ответ: тест не пройден, ключ не раскрыт, видно ошибочный вопрос');
+select pg_temp.check(not exists (select 1 from lesson_progress where lesson_id = '30000000-0000-0000-0000-000000000005'), 'непройденный тест не засчитан');
+select pg_temp.check(
+  (select (r->>'passed')::boolean and r->'key' is not null from (select submit_quiz('30000000-0000-0000-0000-000000000005', '{"q1":["a"],"q2":["g","r"]}') r) t),
+  'верный ответ: тест пройден');
+select pg_temp.check(exists (select 1 from lesson_progress where lesson_id = '30000000-0000-0000-0000-000000000005' and user_id = auth.uid()), 'пройденный тест засчитан');
+select pg_temp.check((select count(*) from quiz_attempts) = 2, 'попытки сохраняются');
+select pg_temp.check((select count(*) from notifications where type = 'homework_reviewed') = 1, 'ученику пришло уведомление о проверке ДЗ');
+select pg_temp.check((select count(*) from notifications where type = 'message') = 1, 'ученику пришло уведомление о сообщении');
+select pg_temp.check((select count(*) from notifications where type in ('student_enrolled','homework_submitted')) = 0, 'ученик не видит чужие уведомления');
+
+select pg_temp.login('00000000-0000-0000-0000-00000000000b');
+do $$ begin perform submit_quiz('30000000-0000-0000-0000-000000000005', '{}');
+  raise exception 'FAIL: тест сдан без доступа к курсу';
+exception when raise_exception then if sqlerrm like 'FAIL%' then raise; end if; raise notice 'ok  нельзя сдать тест чужого курса'; end $$;
+
 -- Аноним
 select pg_temp.login(null);
 set role anon;

@@ -1,6 +1,6 @@
 import type {
   Course, Module, Lesson, Homework, ChatMessage, User, Enrollment, Invite,
-  LessonProgressRow, InviteInfo,
+  LessonProgressRow, InviteInfo, QuizKey, QuizResult, AppNotification,
 } from '../../types';
 
 export type CourseMeta = Omit<Course, 'modules'>;
@@ -15,6 +15,9 @@ export interface Snapshot {
   messages: ChatMessage[];
   users: User[];
   invites: Invite[];
+  /** Только для сотрудников школы */
+  quizKeys: QuizKey[];
+  notifications: AppNotification[];
 }
 
 export type FileBucket = 'covers' | 'lesson-files' | 'homework-files';
@@ -39,6 +42,10 @@ export interface Backend {
   redeemInvite(code: string): Promise<string>;
 
   setLessonComplete(row: LessonProgressRow, done: boolean): Promise<void>;
+  saveQuizKey(key: QuizKey): Promise<void>;
+  submitQuiz(lessonId: string, answers: Record<string, string[]>): Promise<QuizResult>;
+
+  markNotificationsRead(ids: string[]): Promise<void>;
   saveHomework(hw: Homework): Promise<void>;
 
   sendMessage(msg: ChatMessage): Promise<void>;
@@ -69,4 +76,18 @@ export function assembleCourses(courses: CourseMeta[], modules: ModuleMeta[], le
 export function errorMessage(e: unknown): string {
   if (e && typeof e === 'object' && 'message' in e) return String((e as { message: unknown }).message);
   return String(e);
+}
+
+/** Убирает правильные ответы из содержимого урока-теста (их хранит QuizKey). */
+export function stripQuizAnswers(lesson: Lesson): Lesson {
+  if (lesson.type !== 'quiz') return lesson;
+  const data = (lesson.content?.data ?? {}) as { questions?: { correct?: unknown }[] };
+  if (!data.questions) return lesson;
+  return {
+    ...lesson,
+    content: {
+      ...lesson.content,
+      data: { ...data, questions: data.questions.map(({ correct: _c, ...q }) => q) },
+    },
+  };
 }

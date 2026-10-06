@@ -190,3 +190,35 @@ export interface AIInsight {
   recommendation?: string;
   actionable: boolean;
 }
+
+/** Ключ теста: правильные ответы, видны только сотрудникам школы */
+export interface QuizKey {
+  lessonId: string;
+  courseId: string;
+  /** questionId -> optionId[] */
+  answers: Record<string, string[]>;
+  passPercent: number;
+}
+
+export interface QuizResult {
+  correct: number;
+  total: number;
+  percent: number;
+  passed: boolean;
+  passPercent: number;
+  /** id вопросов с ошибкой */
+  wrong: string[];
+  /** Правильные ответы — только если тест пройден */
+  key: Record<string, string[]> | null;
+}
+
+export interface AppNotification {
+  id: string;
+  userId: string;
+  type: 'homework_submitted' | 'homework_reviewed' | 'student_enrolled' | 'message' | string;
+  title: string;
+  body?: string;
+  link?: string;
+  read: boolean;
+  createdAt: string;
+}

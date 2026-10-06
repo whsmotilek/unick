@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback, useMemo, u
 import { toast } from 'sonner';
 import {
   Course, Module, Lesson, StudentProgress, Homework, ChatMessage, ChatThread, User,
-  Enrollment, Invite, InviteInfo, LessonProgressRow, AttachedFile,
+  Enrollment, Invite, InviteInfo, LessonProgressRow, AttachedFile, QuizKey, QuizResult, AppNotification,
 } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -27,6 +27,11 @@ interface DataStoreContextType {
   getUser(id: string): User | undefined;
   enrollmentRecords: Enrollment[];
   invites: Invite[];
+  /** Ключи тестов (только у сотрудников школы) */
+  quizKeys: QuizKey[];
+  notifications: AppNotification[];
+  /** Сырые отметки прохождения уроков (для аналитики по датам) */
+  progressRows: LessonProgressRow[];
   /** userId -> courseId[] (активные записи) */
   enrollments: Record<string, string[]>;
   progress: Record<string, Record<string, StudentProgress>>;
@@ -71,6 +76,13 @@ interface DataStoreContextType {
   getCompletedLessonsCount(userId: string): number;
   getCourseProgress(userId: string, courseId: string): number;
 
+  // Тесты
+  saveQuizKey(key: QuizKey): void;
+  submitQuiz(lessonId: string, answers: Record<string, string[]>): Promise<QuizResult>;
+
+  // Уведомления
+  markNotificationsRead(ids: string[]): void;
+
   // Домашние задания
   getHomeworkForStudent(userId: string): Homework[];
   getHomeworkForCourse(courseId: string): Homework[];
@@ -90,7 +102,7 @@ interface DataStoreContextType {
 
 const DataStoreContext = createContext<DataStoreContextType | undefined>(undefined);
 
-const EMPTY: Snapshot = { courses: [], enrollments: [], progress: [], homework: [], messages: [], users: [], invites: [] };
+const EMPTY: Snapshot = { courses: [], enrollments: [], progress: [], homework: [], messages: [], users: [], invites: [], quizKeys: [], notifications: [] };
 
 function chatKey(a: string, b: string): string {
   return [a, b].sort().join('|');
@@ -413,6 +425,34 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
 
   const getCourseProgress = useCallback((userId: string, courseId: string) => progress[userId]?.[courseId]?.progress ?? 0, [progress]);
 
+  // ===== Тесты =====
+
+  const saveQuizKey = (key: QuizKey) => {
+    setData(d => ({ ...d, quizKeys: [...d.quizKeys.filter(k => k.lessonId !== key.lessonId), key] }));
+    persist(backend.saveQuizKey(key));
+  };
+
+  const submitQuiz = async (lessonId: string, answers: Record<string, string[]>) => {
+    const result = await backend.submitQuiz(lessonId, answers);
+    const u = userRef.current;
+    if (result.passed && u) {
+      const lesson = data.courses.flatMap(c => c.modules.flatMap(m => m.lessons.map(l => ({ l, courseId: c.id })))).find(x => x.l.id === lessonId);
+      if (lesson && !data.progress.some(p => p.userId === u.id && p.lessonId === lessonId)) {
+        setData(d => ({ ...d, progress: [...d.progress, { userId: u.id, courseId: lesson.courseId, lessonId, completedAt: nowIso() }] }));
+      }
+    }
+    return result;
+  };
+
+  // ===== Уведомления =====
+
+  const markNotificationsRead = (ids: string[]) => {
+    const unread = ids.filter(id => data.notifications.some(n => n.id === id && !n.read));
+    if (!unread.length) return;
+    setData(d => ({ ...d, notifications: d.notifications.map(n => (unread.includes(n.id) ? { ...n, read: true } : n)) }));
+    persist(backend.markNotificationsRead(unread));
+  };
+
   // ===== Домашние задания =====
 
   const getHomeworkForStudent = useCallback((userId: string) => data.homework.filter(h => h.studentId === userId), [data.homework]);
@@ -496,6 +536,8 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
       loading, refresh,
       courses: data.courses, users: data.users, getUser,
       enrollmentRecords: data.enrollments, invites: data.invites,
+      quizKeys: data.quizKeys, notifications: data.notifications, progressRows: data.progress,
+      saveQuizKey, submitQuiz, markNotificationsRead,
       enrollments, progress, homework: data.homework, chats,
       createCourse, updateCourse, deleteCourse, getCourse,
       addModule, updateModule, deleteModule, moveModule,
