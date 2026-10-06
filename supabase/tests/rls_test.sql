@@ -3,7 +3,7 @@
 create or replace function pg_temp.login(p uuid) returns void language plpgsql as $$
 begin perform set_config('request.jwt.claim.sub', coalesce(p::text, ''), false); end $$;
 create or replace function pg_temp.check(cond boolean, msg text) returns void language plpgsql as $$
-begin if not cond then raise exception 'FAIL: %', msg; end if; raise notice 'ok  %', msg; end $$;
+begin if cond is not true then raise exception 'FAIL: %', msg; end if; raise notice 'ok  %', msg; end $$;
 
 -- Пользователи создаются через auth.users -> триггер
 insert into auth.users (id, email, raw_user_meta_data) values
@@ -60,14 +60,25 @@ insert into lessons (id, module_id, course_id, title, type, content) values
  ('30000000-0000-0000-0000-000000000002', '20000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', 'ДЗ', 'homework', '{}');
 insert into invites (course_id, code, max_uses) values ('10000000-0000-0000-0000-000000000001', 'join-a', 1);
 select pg_temp.check((select count(*) from courses) = 2, 'автор видит свои курсы, включая черновик');
+-- Создание с RETURNING (так работает API): черновик и курс по приглашению
+do $$ declare v uuid; begin
+  insert into courses (school_id, title, status, access_type) values (my_school_id(), 'Черновик с returning', 'draft', 'invite') returning id into v;
+  if v is null then raise exception 'FAIL: insert returning'; end if;
+  insert into courses (id, school_id, title) values (v, my_school_id(), 'Upsert-черновик')
+    on conflict (id) do update set title = excluded.title;
+  delete from courses where id = v;
+  raise notice 'ok  автор создаёт черновик через INSERT RETURNING и upsert';
+end $$;
 
 -- Чужой автор
 select pg_temp.login('00000000-0000-0000-0000-00000000000b');
-select pg_temp.check((select count(*) from courses) = 1, 'чужой автор видит только опубликованный курс');
+select pg_temp.check((select count(*) from courses) = 0, 'чужой автор не видит курс по приглашению');
 select pg_temp.check((select count(*) from lessons) = 0, 'чужой автор не видит уроки');
 select pg_temp.check((select count(*) from invites) = 0, 'чужой автор не видит инвайты');
 update courses set title = 'взлом' where id = '10000000-0000-0000-0000-000000000001';
+reset role;
 select pg_temp.check((select title from courses where id = '10000000-0000-0000-0000-000000000001') = 'Курс А', 'чужой автор не может изменить курс');
+set role authenticated;
 do $$ begin
   insert into courses (school_id, title) values ((select school_id from profiles where email='author@x.ru'), 'x');
   raise exception 'FAIL: вставка в чужую школу прошла';
@@ -191,7 +202,12 @@ exception when raise_exception then if sqlerrm like 'FAIL%' then raise; end if; 
 -- Аноним
 select pg_temp.login(null);
 set role anon;
-select pg_temp.check((select count(*) from courses) = 1, 'аноним видит только опубликованный курс');
+select pg_temp.check((select count(*) from courses) = 0, 'аноним не видит курс по приглашению');
+reset role;
+update courses set access_type = 'free' where id = '10000000-0000-0000-0000-000000000001';
+set role anon;
+select pg_temp.check((select count(*) from courses) = 1, 'аноним видит опубликованный курс со свободной записью');
+select pg_temp.check((select count(*) from modules) = 1, 'аноним видит программу свободного курса');
 select pg_temp.check((select count(*) from lessons) = 0, 'аноним не видит уроки');
 reset role;
 \echo ALL RLS TESTS PASSED

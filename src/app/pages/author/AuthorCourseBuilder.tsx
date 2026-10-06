@@ -24,6 +24,7 @@ import { CourseAccessPanel } from '../../components/author/CourseAccessPanel';
 import { FileUpload } from '../../components/lesson/FileUpload';
 import { LESSON_TYPE_LABELS } from '../../lib/lessonContent';
 import { PageSkeleton } from '../../components/skeletons/PageSkeleton';
+import { pluralize } from '../../lib/analytics';
 
 const lessonIcons: Record<Lesson['type'], typeof Video> = {
   video: Video,
@@ -40,7 +41,95 @@ const ACCESS_LABELS: Record<CourseAccessType, { title: string; hint: string }> =
   paid: { title: 'Платный', hint: 'Приём оплаты на платформе появится позже. Пока выдавайте доступ ссылкой после оплаты.' },
 };
 
-function CourseSettings({ course, onSaved }: { course: Course | undefined; onSaved: (c: Partial<Course>) => void }) {
+const STUDENT_FORMS: [string, string, string] = ['ученик', 'ученика', 'учеников'];
+const LESSON_FORMS: [string, string, string] = ['урок', 'урока', 'уроков'];
+const MODULE_FORMS: [string, string, string] = ['модуль', 'модуля', 'модулей'];
+
+/** Число учеников с доступом к курсу (активные и завершившие записи) */
+export function countCourseStudents(enrollments: { courseId: string; status: string }[], courseId: string): number {
+  return enrollments.filter(e => e.courseId === courseId && e.status !== 'revoked').length;
+}
+
+/**
+ * Подтверждение удаления курса. Если у курса есть ученики — нужно ввести точное название курса,
+ * а как более безопасный вариант предлагается снять курс с публикации.
+ */
+export function DeleteCourseDialog({ course, open, onOpenChange, onDeleted }: {
+  course: Course | undefined;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onDeleted?: () => void;
+}) {
+  const { enrollmentRecords, deleteCourse, updateCourse } = useDataStore();
+  const [confirmText, setConfirmText] = useState('');
+  useEffect(() => { if (!open) setConfirmText(''); }, [open]);
+
+  const students = course ? countCourseStudents(enrollmentRecords, course.id) : 0;
+  const needsConfirm = students > 0;
+  const canDelete = !!course && (!needsConfirm || confirmText.trim() === course.title.trim());
+
+  const handleDelete = () => {
+    if (!course || !canDelete) return;
+    deleteCourse(course.id);
+    toast.success('Курс удалён');
+    onOpenChange(false);
+    onDeleted?.();
+  };
+
+  const handleUnpublish = () => {
+    if (!course) return;
+    updateCourse(course.id, { status: 'draft' });
+    toast.success('Курс снят с публикации — он виден только вам');
+    onOpenChange(false);
+  };
+
+  return (
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Удалить курс?</AlertDialogTitle>
+          <AlertDialogDescription asChild>
+            <div className="space-y-2">
+              {needsConfirm ? (
+                <>
+                  <p className="font-medium text-[#FF6B6B]">
+                    У курса {pluralize(students, STUDENT_FORMS)} — {students === 1 ? 'его' : 'их'} доступ, прогресс и домашние задания будут удалены.
+                  </p>
+                  <p>Это действие нельзя отменить. Если курс нужно просто скрыть от новых учеников — снимите его с публикации.</p>
+                </>
+              ) : (
+                <p>Это действие нельзя отменить. Модули и уроки курса будут удалены.</p>
+              )}
+            </div>
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        {needsConfirm && course && (
+          <div className="space-y-1.5">
+            <Label htmlFor="delete-course-confirm" className="block text-[13px] leading-relaxed font-normal text-[#1A1A2E]">
+              Чтобы удалить, введите название курса: <span className="font-semibold [overflow-wrap:anywhere]">{course.title}</span>
+            </Label>
+            <Input id="delete-course-confirm" value={confirmText} onChange={e => setConfirmText(e.target.value)}
+              autoComplete="off" placeholder={course.title} />
+          </div>
+        )}
+        <AlertDialogFooter>
+          <AlertDialogCancel>Отмена</AlertDialogCancel>
+          {needsConfirm && course?.status === 'published' && (
+            <Button variant="outline" onClick={handleUnpublish}>Снять с публикации</Button>
+          )}
+          <Button onClick={handleDelete} disabled={!canDelete} className="bg-[#FF6B6B] hover:bg-[#E55555] text-white">Удалить</Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
+function CourseSettings({ course, onSaved, onCoverChange }: {
+  course: Course | undefined;
+  onSaved: (c: Partial<Course>) => void;
+  /** Обложка сохраняется сразу после загрузки/удаления (для существующего курса) */
+  onCoverChange?: (cover: string | undefined) => void;
+}) {
   const [title, setTitle] = useState(course?.title || '');
   const [description, setDescription] = useState(course?.description || '');
   const [cover, setCover] = useState(course?.cover || '');
@@ -88,8 +177,8 @@ function CourseSettings({ course, onSaved }: { course: Course | undefined; onSav
             {course ? (
               <div className="flex flex-col gap-2">
                 <FileUpload bucket="covers" pathPrefix={course.id} accept="image/png,image/jpeg,image/webp" label="Загрузить картинку"
-                  onUploaded={f => setCover(f.path)} />
-                {cover && <Button variant="ghost" size="sm" onClick={() => setCover('')}>Убрать</Button>}
+                  onUploaded={f => { setCover(f.path); onCoverChange?.(f.path); }} />
+                {cover && <Button variant="ghost" size="sm" onClick={() => { setCover(''); onCoverChange?.(undefined); }}>Убрать</Button>}
               </div>
             ) : (
               <p className="text-xs text-[#8A8A9A]">Загрузить обложку можно после создания курса</p>
@@ -123,6 +212,11 @@ function CourseSettings({ course, onSaved }: { course: Course | undefined; onSav
           </div>
           <Switch aria-label="Уроки по порядку" checked={sequential} onCheckedChange={setSequential} />
         </div>
+        {sequential && (
+          <p className="-mt-3 px-1 text-xs text-[#8A8A9A]">
+            Если в курсе есть домашние задания, следующий урок откроется только после того, как вы примете работу
+          </p>
+        )}
 
         <div>
           <Label htmlFor="course-status">Статус</Label>
@@ -150,7 +244,7 @@ export function AuthorCourseBuilder() {
   const isNew = !id || id === 'new';
   const { user } = useAuth();
   const {
-    loading, getCourse, createCourse, updateCourse, deleteCourse, addModule, updateModule, deleteModule, moveModule,
+    loading, getCourse, createCourse, updateCourse, addModule, updateModule, deleteModule, moveModule,
     addLesson, updateLesson, deleteLesson, moveLesson, enrollmentRecords, saveQuizKey,
   } = useDataStore();
 
@@ -234,11 +328,10 @@ export function AuthorCourseBuilder() {
     setLessonDialogOpen(false);
   };
 
-  const handleDeleteCourse = () => {
+  const handleCoverChange = (cover: string | undefined) => {
     if (!course) return;
-    deleteCourse(course.id);
-    toast.success('Курс удалён');
-    navigate('/author/courses');
+    updateCourse(course.id, { cover });
+    toast.success(cover ? 'Обложка сохранена' : 'Обложка удалена');
   };
 
   if (!isNew && !course) {
@@ -254,7 +347,8 @@ export function AuthorCourseBuilder() {
     );
   }
 
-  const studentsCount = course ? enrollmentRecords.filter(e => e.courseId === course.id && e.status !== 'revoked').length : 0;
+  const studentsCount = course ? countCourseStudents(enrollmentRecords, course.id) : 0;
+  const lessonsCount = course ? course.modules.reduce((s, m) => s + m.lessons.length, 0) : 0;
   const firstLesson = course?.modules.flatMap(m => m.lessons)[0];
 
   return (
@@ -267,7 +361,7 @@ export function AuthorCourseBuilder() {
               {course?.title || 'Новый курс'}
             </h1>
             <p className="text-[13px] text-[#8A8A9A]" style={{ fontFamily: 'var(--font-body)' }}>
-              {course ? `${course.modules.length} модулей · ${course.modules.reduce((s, m) => s + m.lessons.length, 0)} уроков · ${studentsCount} учеников` : 'Название, описание и доступ'}
+              {course ? `${pluralize(course.modules.length, MODULE_FORMS)} · ${pluralize(lessonsCount, LESSON_FORMS)} · ${pluralize(studentsCount, STUDENT_FORMS)}` : 'Название, описание и доступ'}
             </p>
           </div>
         </div>
@@ -318,7 +412,7 @@ export function AuthorCourseBuilder() {
                         <span className="w-8 h-8 shrink-0 rounded-lg bg-[#EDE9FF] text-[#7C6AF7] text-xs font-semibold flex items-center justify-center">{mIndex + 1}</span>
                         <button type="button" className="flex-1 min-w-0 text-left" onClick={() => setExpandedModule(expanded ? '' : module.id)}>
                           <h3 className="text-[14px] font-semibold text-[#1A1A2E] truncate" style={{ fontFamily: 'var(--font-heading)' }}>{module.title}</h3>
-                          <p className="text-[12px] text-[#8A8A9A]">{module.lessons.length} уроков</p>
+                          <p className="text-[12px] text-[#8A8A9A]">{pluralize(module.lessons.length, LESSON_FORMS)}</p>
                         </button>
                         <Button variant="ghost" size="icon" aria-label="Выше" disabled={mIndex === 0} onClick={() => moveModule(course.id, module.id, -1)}><ArrowUp className="w-4 h-4" /></Button>
                         <Button variant="ghost" size="icon" aria-label="Ниже" disabled={mIndex === course.modules.length - 1} onClick={() => moveModule(course.id, module.id, 1)}><ArrowDown className="w-4 h-4" /></Button>
@@ -370,7 +464,7 @@ export function AuthorCourseBuilder() {
         </TabsContent>
 
         <TabsContent value="settings">
-          <CourseSettings course={course} onSaved={handleSettingsSaved} />
+          <CourseSettings course={course} onSaved={handleSettingsSaved} onCoverChange={handleCoverChange} />
         </TabsContent>
 
         <TabsContent value="access">
@@ -400,18 +494,8 @@ export function AuthorCourseBuilder() {
         <LessonEditorDialog open={lessonDialogOpen} onOpenChange={setLessonDialogOpen} courseId={course.id} initial={editingLesson} onSave={saveLesson} />
       )}
 
-      <AlertDialog open={deleteCourseOpen} onOpenChange={setDeleteCourseOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Удалить курс?</AlertDialogTitle>
-            <AlertDialogDescription>Это действие нельзя отменить. Модули, уроки, записи учеников и их прогресс будут удалены.</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Отмена</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteCourse} className="bg-[#FF6B6B] hover:bg-[#E55555]">Удалить</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteCourseDialog course={course} open={deleteCourseOpen} onOpenChange={setDeleteCourseOpen}
+        onDeleted={() => navigate('/author/courses')} />
 
       <AlertDialog open={!!deleteModuleId} onOpenChange={o => !o && setDeleteModuleId(null)}>
         <AlertDialogContent>

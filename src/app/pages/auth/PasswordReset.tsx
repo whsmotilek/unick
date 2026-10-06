@@ -32,6 +32,7 @@ export function ForgotPassword() {
           {sent ? (
             <p className="text-sm text-[#1A1A2E] text-center" style={{ fontFamily: 'var(--font-body)' }}>
               Если аккаунт с адресом <b>{email}</b> существует, мы отправили на него ссылку для смены пароля.
+              <span className="block mt-3 text-[#8A8A9A]">Письмо не пришло за 10 минут? Проверьте «Спам» или напишите автору курса — он поможет восстановить доступ.</span>
             </p>
           ) : (
             <form onSubmit={submit} className="space-y-4">

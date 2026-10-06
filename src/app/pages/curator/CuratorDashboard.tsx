@@ -18,6 +18,7 @@ import { FileList } from '../../components/lesson/FileList';
 import { NotificationBell } from '../../components/NotificationBell';
 import { useNavigate } from 'react-router';
 import { Homework, User } from '../../types';
+import { localDayKey, pluralize } from '../../lib/analytics';
 import logoWhiteFull from '@/assets/logo/logo-full-white.png';
 
 export function CuratorDashboard() {
@@ -52,8 +53,8 @@ export function CuratorDashboard() {
   }, [homework]);
 
   const reviewedToday = useMemo(() => {
-    const today = new Date().toISOString().slice(0, 10);
-    return homework.filter(h => h.reviewedAt && h.reviewedAt.slice(0, 10) === today).length;
+    const today = localDayKey(new Date());
+    return homework.filter(h => h.reviewedAt && localDayKey(new Date(h.reviewedAt)) === today).length;
   }, [homework]);
 
   // At-risk students: enrolled but no activity in 7+ days
@@ -226,7 +227,7 @@ export function CuratorDashboard() {
                           </div>
                           <Badge variant="destructive" className="text-[10px]">
                             <AlertCircle className="w-3 h-3 mr-1" />
-                            {s.daysSince === 999 ? 'Не начал' : `${s.daysSince} дн.`}
+                            {s.daysSince === 999 ? 'Не начал' : `${pluralize(s.daysSince, ['день', 'дня', 'дней'])} без активности`}
                           </Badge>
                         </div>
                         <div className="flex items-center gap-2">

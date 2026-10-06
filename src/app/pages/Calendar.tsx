@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
@@ -7,54 +7,121 @@ import { useDataStore } from '../store/DataStore';
 import { useAuth } from '../context/AuthContext';
 import { motion } from 'motion/react';
 import { Link } from 'react-router';
+import { homeworkDeadline, lessonData } from '../lib/lessonContent';
+import { localDayKey, pluralize } from '../lib/analytics';
 
 interface CalendarEvent {
   date: string; // YYYY-MM-DD
   type: 'homework' | 'lesson';
   title: string;
   courseTitle?: string;
+  /** Дополнительная строка, например сколько учеников ещё не сдали */
+  note?: string;
   link?: string;
 }
 
 const monthNames = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
 const dayNames = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 
+/** Дата события (YYYY-MM-DD) в локальном времени. Строку без времени считаем уже локальной датой. */
+function dayKeyOf(value: string): string {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? value.slice(0, 10) : localDayKey(d);
+}
+
+/** Сколько календарных дней от сегодня до даты YYYY-MM-DD (по локальному времени) */
+function daysFromToday(dayKey: string): number {
+  const [y, m, d] = dayKey.split('-').map(Number);
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  return Math.round((new Date(y, m - 1, d).getTime() - today) / 86_400_000);
+}
+
+function MaybeLink({ to, children }: { to?: string; children: ReactNode }) {
+  return to ? <Link to={to} className="block">{children}</Link> : <>{children}</>;
+}
+
 export function Calendar() {
   const { user } = useAuth();
-  const { courses, enrollments, homework } = useDataStore();
+  const { courses, enrollments, enrollmentRecords, homework } = useDataStore();
   const [currentDate, setCurrentDate] = useState(new Date());
+  const todayStr = localDayKey(new Date());
 
   const events = useMemo<CalendarEvent[]>(() => {
     if (!user) return [];
     const list: CalendarEvent[] = [];
-    const enrolledIds = user.role === 'student'
+    const isStudent = user.role === 'student';
+    const enrolledIds = isStudent
       ? (enrollments[user.id] || [])
       : courses.filter(c => c.schoolId === user.schoolId).map(c => c.id);
 
     for (const c of courses) {
       if (!enrolledIds.includes(c.id)) continue;
+      const courseEnrollments = enrollmentRecords.filter(e => e.courseId === c.id && e.status !== 'revoked');
       for (const m of c.modules) {
         for (const l of m.lessons) {
-          if (l.type === 'homework' && l.content?.data?.deadline) {
+          if (l.type !== 'homework') continue;
+          const data = lessonData(l);
+          if (!data.deadlineDays && !data.deadline) continue;
+
+          if (isStudent) {
+            // Срок ученика считается от даты его записи на курс; сданные и принятые работы в календаре не нужны
+            const enrolledAt = courseEnrollments.find(e => e.userId === user.id)?.createdAt;
+            const deadline = homeworkDeadline(data, enrolledAt);
+            if (!deadline) continue;
+            const hw = homework.find(h => h.lessonId === l.id && h.studentId === user.id);
+            if (hw && hw.status !== 'pending' && hw.status !== 'returned') continue;
             list.push({
-              date: l.content.data.deadline.slice(0, 10),
+              date: dayKeyOf(deadline),
               type: 'homework',
               title: l.title,
               courseTitle: c.title,
-              link: user.role === 'student' ? '/student/homework' : '/author/homework',
+              link: `/student/courses/${c.id}/lesson/${l.id}`,
             });
+            continue;
           }
+
+          // Автор/куратор: у каждого ученика свой срок (от даты записи). Показываем одно событие на урок —
+          // ближайший предстоящий срок среди учеников, которые ещё не сдали работу, и их количество.
+          if (!data.deadlineDays) {
+            list.push({
+              date: dayKeyOf(data.deadline!),
+              type: 'homework',
+              title: `Срок ДЗ: ${l.title}`,
+              courseTitle: c.title,
+              link: '/author/homework',
+            });
+            continue;
+          }
+          const pendingDays = courseEnrollments
+            .filter(e => {
+              const hw = homework.find(h => h.lessonId === l.id && h.studentId === e.userId);
+              return !hw || hw.status === 'pending' || hw.status === 'returned';
+            })
+            .map(e => dayKeyOf(homeworkDeadline(data, e.createdAt)!))
+            .filter(d => d >= todayStr)
+            .sort();
+          if (pendingDays.length === 0) continue;
+          list.push({
+            date: pendingDays[0],
+            type: 'homework',
+            title: `Срок ДЗ: ${l.title}`,
+            note: `Ближайший срок · ещё не сдали: ${pluralize(pendingDays.length, ['ученик', 'ученика', 'учеников'])}`,
+            courseTitle: c.title,
+            link: '/author/homework',
+          });
         }
       }
     }
 
     // Recent submissions for author/curator
-    if (user.role === 'author' || user.role === 'curator') {
+    if (!isStudent) {
       for (const h of homework) {
         if (h.submittedAt && enrolledIds.includes(h.courseId)) {
           const c = courses.find(c => c.id === h.courseId);
           list.push({
-            date: h.submittedAt.slice(0, 10),
+            date: dayKeyOf(h.submittedAt),
             type: 'lesson',
             title: `Сдано: ${h.title}`,
             courseTitle: c?.title,
@@ -64,7 +131,7 @@ export function Calendar() {
     }
 
     return list;
-  }, [user, courses, enrollments, homework]);
+  }, [user, courses, enrollments, enrollmentRecords, homework, todayStr]);
 
   const eventsByDate = useMemo(() => {
     const map: Record<string, CalendarEvent[]> = {};
@@ -88,7 +155,6 @@ export function Calendar() {
   for (let d = 1; d <= daysInMonth; d++) cells.push(d);
   while (cells.length % 7 !== 0) cells.push(null);
 
-  const todayStr = new Date().toISOString().slice(0, 10);
   const upcoming = useMemo(() => {
     return events
       .filter(e => e.date >= todayStr)
@@ -185,9 +251,10 @@ export function Calendar() {
           ) : (
             <div className="space-y-2">
               {upcoming.map((e, i) => {
-                const days = Math.ceil((new Date(e.date).getTime() - Date.now()) / 86400000);
+                const days = daysFromToday(e.date);
                 return (
                   <motion.div key={i} initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}>
+                    <MaybeLink to={e.link}>
                     <Card className="border-0 hover:shadow-md transition-all">
                       <CardContent className="p-4">
                         <div className="flex items-start gap-3">
@@ -206,13 +273,19 @@ export function Calendar() {
                                 {e.courseTitle}
                               </p>
                             )}
+                            {e.note && (
+                              <p className="text-[11px] text-[#1A1A2E]/70 mb-1" style={{ fontFamily: 'var(--font-body)' }}>
+                                {e.note}
+                              </p>
+                            )}
                             <Badge variant={days <= 0 ? 'destructive' : days < 3 ? 'warning' : 'secondary'} className="text-[10px]">
-                              {days === 0 ? 'Сегодня' : days === 1 ? 'Завтра' : `Через ${days} дн.`}
+                              {days === 0 ? 'Сегодня' : days === 1 ? 'Завтра' : `Через ${pluralize(days, ['день', 'дня', 'дней'])}`}
                             </Badge>
                           </div>
                         </div>
                       </CardContent>
                     </Card>
+                    </MaybeLink>
                   </motion.div>
                 );
               })}

@@ -10,10 +10,16 @@ export function FileList({ files, bucket, onRemove }: { files: AttachedFile[]; b
   if (!files.length) return null;
 
   const open = async (f: AttachedFile) => {
+    // iOS Safari блокирует window.open после await как всплывающее окно, поэтому
+    // пустую вкладку открываем синхронно в обработчике клика, а адрес подставляем потом.
+    const w = window.open('', '_blank');
+    if (w) w.opener = null;
     try {
       const url = await fileUrl(bucket, f.path);
-      window.open(url, '_blank', 'noopener');
+      if (w && !w.closed) w.location.href = url;
+      else window.location.assign(url);
     } catch (e) {
+      w?.close();
       toast.error(`Файл недоступен: ${e instanceof Error ? e.message : e}`);
     }
   };

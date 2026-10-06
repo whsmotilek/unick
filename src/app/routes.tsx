@@ -1,4 +1,4 @@
-import { createBrowserRouter, Link } from 'react-router';
+import { createBrowserRouter, Link, Navigate } from 'react-router';
 import { lazy, Suspense } from 'react';
 import { Landing } from './pages/landing/Landing';
 import { Login } from './pages/auth/Login';
@@ -40,25 +40,7 @@ import { CuratorDashboard } from './pages/curator/CuratorDashboard';
 import { AdminDashboard } from './pages/admin/AdminDashboard';
 
 // Heavy/rare — lazy load
-const CourseUniverse = lazy(() => import('./pages/author/CourseUniverse').then(m => ({ default: m.CourseUniverse })));
 const Calendar = lazy(() => import('./pages/Calendar').then(m => ({ default: m.Calendar })));
-
-function Placeholder({ title }: { title: string }) {
-  return (
-    <div className="min-h-screen bg-[#F5F4F2] p-8">
-      <div className="max-w-2xl mx-auto">
-        <div className="bg-white rounded-2xl border-0 shadow-[0_2px_12px_rgba(0,0,0,0.06)] p-12 text-center">
-          <h2 className="text-[28px] font-bold text-[#1A1A2E] mb-3" style={{ fontFamily: 'var(--font-heading)' }}>
-            {title}
-          </h2>
-          <p className="text-[13px] text-[#8A8A9A]" style={{ fontFamily: 'var(--font-body)' }}>
-            Эта страница будет реализована в следующих версиях
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 const Lazy = ({ children }: { children: React.ReactNode }) => (
   <Suspense fallback={<PageSkeleton />}>{children}</Suspense>
@@ -97,13 +79,12 @@ export const router = createBrowserRouter([
       { path: 'crm', element: <AuthorCRM /> },
       { path: 'chat', element: <ChatPage /> },
       { path: 'profile', element: <ProfilePage /> },
-      { path: 'course-universe', element: <Lazy><CourseUniverse /></Lazy> },
       { path: 'calendar', element: <Lazy><Calendar /></Lazy> },
-      { path: 'pages', element: <Placeholder title="Страницы школы" /> },
-      { path: 'team', element: <Placeholder title="Команда" /> },
-      { path: 'flows', element: <Placeholder title="Потоки и группы" /> },
-      { path: 'payments', element: <Placeholder title="Платежи" /> },
-      { path: 'content', element: <Placeholder title="Библиотека контента" /> },
+      // Разделы, которых пока нет в продукте: старые ссылки ведут на главную кабинета
+      ...['course-universe', 'pages', 'team', 'flows', 'payments', 'content'].map(path => ({
+        path,
+        element: <Navigate to="/author" replace />,
+      })),
     ],
   },
 
@@ -122,7 +103,7 @@ export const router = createBrowserRouter([
       { path: 'chat', element: <ChatPage /> },
       { path: 'profile', element: <ProfilePage /> },
       { path: 'calendar', element: <Lazy><Calendar /></Lazy> },
-      { path: 'payments', element: <Placeholder title="Платежи" /> },
+      { path: 'payments', element: <Navigate to="/student" replace /> },
     ],
   },
 

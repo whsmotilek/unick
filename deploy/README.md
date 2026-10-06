@@ -6,7 +6,7 @@
 | IP | `159.194.245.212` |
 | Платформа | https://unick.online (www и старый адрес unick.159-194-245-212.sslip.io перенаправляют сюда) |
 | API Supabase | https://api.unick.online |
-| Studio (админка БД) | https://api.unick.online (логин `unick-admin`, пароль: `DASHBOARD_PASSWORD` в `/opt/unick/supabase/.env`) |
+| Studio (админка БД) | только через SSH-туннель, см. раздел «Studio» |
 
 Домен `unick.online` (Beget). DNS: A-записи `@`, `www`, `api` → `159.194.245.212`.
 
@@ -75,6 +75,37 @@ sh run.sh restart         # перезапуск
 ```bash
 ssh unick "docker exec supabase-db psql -U postgres -c \"update profiles set role='admin' where email='you@example.com'\""
 ```
+
+## Ручной сброс пароля (пока нет почты)
+
+Пользователь забыл пароль, а письмо не уйдёт: задать временный пароль и сообщить его пользователю лично,
+попросить сменить в профиле.
+```bash
+ssh unick "docker exec supabase-db psql -U postgres -c \"update auth.users set encrypted_password = crypt('Временный-пароль-2026', gen_salt('bf')) where email = 'user@example.com'\""
+```
+
+## Studio (панель базы данных)
+
+Наружу не публикуется. Открыть через SSH-туннель:
+```bash
+ssh -L 3001:127.0.0.1:3001 unick
+```
+и зайти на http://localhost:3001.
+
+## Безопасность (deploy/02-security.sh)
+
+- SSH: только ключи, `PermitRootLogin prohibit-password`, `MaxAuthTries 3`. Облачный `50-cloud-init.conf` включал пароли — перекрыт `00-unick-hardening.conf`.
+- fail2ban (`fail2ban-client status <jail>`):
+  - `sshd` — 4 попытки, бан на 6 часов;
+  - `unick-auth` — 10 неудачных входов или регистраций за 10 минут, бан на час;
+  - `unick-scan` — сканеры (`.env`, `wp-admin`, `.php`), бан на сутки;
+  - `recidive` — повторные нарушители, бан на неделю.
+
+  Баны ставятся в цепочку `DOCKER-USER`, потому что порты Docker обходят `ufw`.
+- Caddy: HSTS, CSP, Permissions-Policy, лимит тела запроса (API 1 МБ, загрузки 55 МБ), JSON-журнал `/var/log/caddy/access.log`.
+- Авторизация: лимиты по реальному IP клиента (`X-Forwarded-For`), пароль от 8 символов, ротация refresh-токенов.
+- Хранилище: лимиты по бакетам, загрузка HTML/SVG/JS запрещена (миграция 0005).
+- Разбанить IP: `fail2ban-client set unick-auth unbanip <ip>`.
 
 ## Почта (сделать до массового приглашения учеников)
 

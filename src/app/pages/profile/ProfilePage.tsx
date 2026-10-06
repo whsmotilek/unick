@@ -10,6 +10,7 @@ import { useDataStore } from '../../store/DataStore';
 import { Save, Trophy, BookOpen, Users, FileCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion } from 'motion/react';
+import { ChangePasswordCard } from '../../components/ChangePasswordCard';
 
 export function ProfilePage() {
   const { user, logout, updateProfile } = useAuth();
@@ -112,6 +113,7 @@ export function ProfilePage() {
           </div>
         </CardContent>
       </Card>
+      <ChangePasswordCard />
     </div>
   );
 }

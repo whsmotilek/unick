@@ -13,8 +13,9 @@ import { EmptyState } from '../../components/EmptyState';
 import { motion } from 'motion/react';
 import { Link } from 'react-router';
 import { User } from '../../types';
+import { pluralize } from '../../lib/analytics';
 
-type Stage = 'all' | 'leads' | 'active' | 'completing' | 'at_risk' | 'completed';
+type Stage = 'all' | 'not_started' | 'active' | 'completing' | 'at_risk' | 'completed';
 
 export function AuthorCRM() {
   const { user } = useAuth();
@@ -70,7 +71,7 @@ export function AuthorCRM() {
       const lastActivityDays = lastActivity ? Math.floor((Date.now() - lastActivity) / 86400000) : 999;
 
       let s: Stage;
-      if (avgProgress === 0) s = 'leads';
+      if (avgProgress === 0) s = 'not_started';
       else if (avgProgress >= 100) s = 'completed';
       else if (lastActivityDays >= 7) s = 'at_risk';
       else if (avgProgress >= 70) s = 'completing';
@@ -83,7 +84,7 @@ export function AuthorCRM() {
 
   const stageCounts = useMemo(() => ({
     all: students.length,
-    leads: students.filter(s => s.stage === 'leads').length,
+    not_started: students.filter(s => s.stage === 'not_started').length,
     active: students.filter(s => s.stage === 'active').length,
     completing: students.filter(s => s.stage === 'completing').length,
     at_risk: students.filter(s => s.stage === 'at_risk').length,
@@ -101,7 +102,7 @@ export function AuthorCRM() {
   }, [students, stage, search]);
 
   const stages: { id: Stage; label: string; color: string; text: string }[] = [
-    { id: 'leads', label: 'Лиды', color: 'bg-[#EDE9FF]', text: 'text-[#7C6AF7]' },
+    { id: 'not_started', label: 'Не начали', color: 'bg-[#EDE9FF]', text: 'text-[#7C6AF7]' },
     { id: 'active', label: 'Активные', color: 'bg-[#B8D8F8]', text: 'text-[#0D3B66]' },
     { id: 'completing', label: 'Завершают', color: 'bg-[#F5E642]', text: 'text-[#5A5000]' },
     { id: 'at_risk', label: 'В риске', color: 'bg-[#FFE5D9]', text: 'text-[#FF6B6B]' },
@@ -149,7 +150,7 @@ export function AuthorCRM() {
           {filtered.length === 0 ? (
             <EmptyState
               title="Нет учеников"
-              description={students.length === 0 ? 'Здесь появятся ученики записанные на ваши курсы' : 'В этой стадии воронки никого нет'}
+              description={students.length === 0 ? 'Здесь появятся ученики, записанные на ваши курсы' : 'В этой стадии воронки никого нет'}
             />
           ) : (
             <div className="space-y-2">
@@ -192,7 +193,7 @@ export function AuthorCRM() {
             <Card className="border-0">
               <CardContent className="p-8 text-center">
                 <p className="text-[13px] text-[#8A8A9A]" style={{ fontFamily: 'var(--font-body)' }}>
-                  Выберите ученика чтобы увидеть детали
+                  Выберите ученика, чтобы увидеть детали
                 </p>
               </CardContent>
             </Card>
@@ -225,9 +226,9 @@ export function AuthorCRM() {
                         <p className="text-[18px] font-bold text-[#1A1A2E]" style={{ fontFamily: 'var(--font-heading)' }}>{selected.coursesCount}</p>
                       </div>
                       <div className="bg-[#F5F4F2] rounded-xl p-3">
-                        <p className="text-[#8A8A9A] mb-1">Активность</p>
+                        <p className="text-[#8A8A9A] mb-1">Был активен</p>
                         <p className="text-[18px] font-bold text-[#1A1A2E]" style={{ fontFamily: 'var(--font-heading)' }}>
-                          {selected.lastActivityDays === 999 ? '—' : `${selected.lastActivityDays} дн.`}
+                          {selected.lastActivityDays === 999 ? '—' : selected.lastActivityDays === 0 ? 'Сегодня' : `${pluralize(selected.lastActivityDays, ['день', 'дня', 'дней'])} назад`}
                         </p>
                       </div>
                     </div>
@@ -242,7 +243,7 @@ export function AuthorCRM() {
                     </div>
                   </div>
 
-                  <Link to="/author/chat">
+                  <Link to={`/author/chat?with=${selected.user.id}`}>
                     <Button className="w-full">
                       <MessageSquare className="w-4 h-4 mr-2" />Написать
                     </Button>

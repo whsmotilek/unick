@@ -4,7 +4,7 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '../../components/ui/avatar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
-import { MessageSquare, Send, Plus, Search } from 'lucide-react';
+import { MessageSquare, Send, Plus, Search, ArrowLeft } from 'lucide-react';
 import { useDataStore } from '../../store/DataStore';
 import { useAuth } from '../../context/AuthContext';
 import { EmptyState } from '../../components/EmptyState';
@@ -13,7 +13,7 @@ import { useSearchParams } from 'react-router';
 import { User } from '../../types';
 
 export function ChatPage() {
-  const { user } = useAuth();
+  const { user, isDemoMode } = useAuth();
   const { sendMessage, getChatMessages, getChatThreads, markChatRead, courses, enrollments, users } = useDataStore();
   const [activeUserId, setActiveUserId] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
@@ -103,9 +103,10 @@ export function ChatPage() {
   };
 
   return (
-    <div className="flex h-full max-h-screen">
-      {/* Threads list */}
-      <aside className="w-full md:w-[320px] bg-white border-r border-[#1A1A2E]/5 flex flex-col">
+    // На десктопе чат занимает всю высоту окна (за вычетом полосы демо-режима), сообщения прокручиваются внутри
+    <div className={`flex ${isDemoMode ? 'md:h-[calc(100dvh-30px)]' : 'md:h-dvh'}`}>
+      {/* Threads list. На телефоне — либо список, либо открытый диалог; на десктопе — две колонки */}
+      <aside className={`${activeUserId ? 'hidden md:flex' : 'flex'} w-full md:w-[320px] bg-white border-r border-[#1A1A2E]/5 flex-col`}>
         <div className="p-4 border-b border-[#1A1A2E]/5">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-[18px] font-bold text-[#1A1A2E]" style={{ fontFamily: 'var(--font-heading)' }}>Чаты</h2>
@@ -165,7 +166,8 @@ export function ChatPage() {
       </aside>
 
       {/* Conversation */}
-      <main className="hidden md:flex flex-1 flex-col bg-[#F5F4F2]">
+      {/* На телефоне открытый диалог занимает весь экран (поверх шапки кабинета), «←» возвращает к списку */}
+      <main className={`${activeUserId ? 'flex fixed inset-0 z-50 md:static md:inset-auto md:z-auto' : 'hidden md:flex'} flex-1 flex-col min-w-0 bg-[#F5F4F2]`}>
         {!activeUserId ? (
           <div className="flex-1 flex items-center justify-center">
             <EmptyState icon={MessageSquare} title="Выберите чат" description="или начните новый диалог слева" />
@@ -173,18 +175,26 @@ export function ChatPage() {
         ) : (
           <>
             <div className="bg-white border-b border-[#1A1A2E]/5 p-4 flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setActiveUserId(null)}
+                aria-label="Назад к списку чатов"
+                className="md:hidden -ml-2 p-2 rounded-lg text-[#1A1A2E] hover:bg-[#F5F4F2] transition-colors"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
               <Avatar className="w-9 h-9">
                 <AvatarImage src={userMap[activeUserId]?.avatar} />
                 <AvatarFallback className="bg-[#7C6AF7] text-white text-xs">
                   {userMap[activeUserId]?.name?.charAt(0) || '?'}
                 </AvatarFallback>
               </Avatar>
-              <div>
-                <p className="text-[14px] font-semibold text-[#1A1A2E]" style={{ fontFamily: 'var(--font-heading)' }}>
+              <div className="min-w-0">
+                <p className="text-[14px] font-semibold text-[#1A1A2E] truncate" style={{ fontFamily: 'var(--font-heading)' }}>
                   {userMap[activeUserId]?.name || 'Пользователь'}
                 </p>
                 <p className="text-[11px] text-[#8A8A9A]" style={{ fontFamily: 'var(--font-body)' }}>
-                  {userMap[activeUserId]?.role === 'author' ? 'Автор курса' : userMap[activeUserId]?.role === 'student' ? 'Ученик' : ''}
+                  {userMap[activeUserId]?.role === 'author' ? 'Автор курса' : userMap[activeUserId]?.role === 'curator' ? 'Куратор' : userMap[activeUserId]?.role === 'student' ? 'Ученик' : ''}
                 </p>
               </div>
             </div>
@@ -201,7 +211,7 @@ export function ChatPage() {
                       transition={{ duration: 0.2 }}
                       className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}
                     >
-                      <div className={`max-w-[70%] rounded-2xl px-4 py-2.5 ${
+                      <div className={`max-w-[85%] md:max-w-[70%] rounded-2xl px-4 py-2.5 ${
                         isMine ? 'bg-[#7C6AF7] text-white' : 'bg-white text-[#1A1A2E]'
                       }`}>
                         <p className="text-[13px] whitespace-pre-wrap break-words" style={{ fontFamily: 'var(--font-body)' }}>{m.content}</p>
@@ -216,7 +226,7 @@ export function ChatPage() {
               <div ref={messagesEndRef} />
             </div>
 
-            <div className="bg-white border-t border-[#1A1A2E]/5 p-4">
+            <div className="bg-white border-t border-[#1A1A2E]/5 p-3 md:p-4 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
               <div className="flex gap-2">
                 <Input
                   placeholder="Введите сообщение..."
@@ -225,7 +235,7 @@ export function ChatPage() {
                   onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())}
                   className="bg-[#F5F4F2] border-0"
                 />
-                <Button onClick={handleSend} disabled={!draft.trim()} className="transition-transform active:scale-[0.98]">
+                <Button onClick={handleSend} disabled={!draft.trim()} aria-label="Отправить" className="transition-transform active:scale-[0.98]">
                   <Send className="w-4 h-4" />
                 </Button>
               </div>
@@ -235,7 +245,7 @@ export function ChatPage() {
       </main>
 
       <Dialog open={newChatOpen} onOpenChange={setNewChatOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Новый чат</DialogTitle>
           </DialogHeader>
@@ -264,7 +274,7 @@ export function ChatPage() {
                   <div>
                     <p className="text-[13px] font-semibold text-[#1A1A2E]" style={{ fontFamily: 'var(--font-body)' }}>{u.name}</p>
                     <p className="text-[11px] text-[#8A8A9A]" style={{ fontFamily: 'var(--font-body)' }}>
-                      {u.role === 'author' ? 'Автор' : u.role === 'student' ? 'Ученик' : u.role}
+                      {u.role === 'author' ? 'Автор' : u.role === 'curator' ? 'Куратор' : u.role === 'student' ? 'Ученик' : u.role}
                     </p>
                   </div>
                 </button>

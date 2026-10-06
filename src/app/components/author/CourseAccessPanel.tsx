@@ -10,6 +10,15 @@ import { Progress } from '../ui/progress';
 import { useDataStore } from '../../store/DataStore';
 import { appUrl } from '../../lib/supabase';
 import type { Course, EnrollmentSource } from '../../types';
+import { pluralize } from '../../lib/analytics';
+
+/** «Вступили 3 человека из 10», «Вступил 1 человек», «Пока никто не вступил · 10 мест» */
+function joinedLabel(uses: number, maxUses?: number | null): string {
+  const limit = maxUses != null ? maxUses : null;
+  if (uses === 0) return limit != null ? `Пока никто не вступил · ${pluralize(limit, ['место', 'места', 'мест'])}` : 'Пока никто не вступил';
+  const verb = uses % 10 === 1 && uses % 100 !== 11 ? 'Вступил' : 'Вступили';
+  return `${verb} ${pluralize(uses, ['человек', 'человека', 'человек'])}${limit != null ? ` из ${limit}` : ''}`;
+}
 
 const SOURCE_LABELS: Record<EnrollmentSource, string> = {
   invite: 'По приглашению',
@@ -102,7 +111,7 @@ export function CourseAccessPanel({ course }: { course: Course }) {
                       <p className="text-xs text-[#8A8A9A] truncate">{url}</p>
                     </div>
                     <span className="text-xs text-[#8A8A9A] whitespace-nowrap">
-                      {inv.uses}{inv.maxUses != null ? ` / ${inv.maxUses}` : ''} вступили
+                      {joinedLabel(inv.uses, inv.maxUses)}
                     </span>
                     {!inv.active ? <Badge variant="secondary">Отключена</Badge> : exhausted ? <Badge variant="secondary">Мест нет</Badge> : <Badge variant="success">Активна</Badge>}
                     <div className="flex gap-1">

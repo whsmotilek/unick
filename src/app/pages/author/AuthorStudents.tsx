@@ -11,6 +11,7 @@ import { EmptyState } from '../../components/EmptyState';
 import { CountUp } from '../../components/CountUp';
 import { motion } from 'motion/react';
 import { User } from '../../types';
+import { pluralize } from '../../lib/analytics';
 
 export function AuthorStudents() {
   const { user } = useAuth();
@@ -116,28 +117,30 @@ export function AuthorStudents() {
                     transition={{ delay: i * 0.03 }}
                     className="flex items-center gap-4 p-4 hover:bg-[#F5F4F2]/50 transition-colors rounded-lg"
                   >
-                    <Avatar className="w-10 h-10">
+                    <Avatar className="w-10 h-10 shrink-0">
                       <AvatarImage src={s.user.avatar} />
                       <AvatarFallback className="bg-[#7C6AF7] text-white text-xs">
                         {s.user.name.charAt(0)}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[13px] font-semibold text-[#1A1A2E]" style={{ fontFamily: 'var(--font-body)' }}>{s.user.name}</p>
-                      <p className="text-[11px] text-[#8A8A9A]" style={{ fontFamily: 'var(--font-body)' }}>{s.user.email}</p>
+                      <p className="text-[13px] font-semibold text-[#1A1A2E] truncate" style={{ fontFamily: 'var(--font-body)' }}>{s.user.name}</p>
+                      <p className="text-[11px] text-[#8A8A9A] truncate" style={{ fontFamily: 'var(--font-body)' }}>{s.user.email}</p>
                     </div>
-                    <div className="hidden md:block flex-1 max-w-xs">
+                    <div className="hidden md:block flex-1 min-w-0 max-w-xs">
                       <p className="text-[11px] text-[#8A8A9A] mb-1" style={{ fontFamily: 'var(--font-body)' }}>
-                        {s.courses.length} {s.courses.length === 1 ? 'курс' : 'курсов'}
+                        {pluralize(s.courses.length, ['курс', 'курса', 'курсов'])}
                       </p>
-                      <div className="flex flex-wrap gap-1">
+                      <div className="flex flex-wrap gap-1 min-w-0">
                         {s.courses.slice(0, 2).map(c => (
-                          <Badge key={c.id} variant="secondary" className="text-[10px]">{c.title}</Badge>
+                          <Badge key={c.id} variant="secondary" title={c.title} className="text-[10px] max-w-full shrink justify-start">
+                            <span className="truncate">{c.title}</span>
+                          </Badge>
                         ))}
                         {s.courses.length > 2 && <Badge variant="secondary" className="text-[10px]">+{s.courses.length - 2}</Badge>}
                       </div>
                     </div>
-                    <div className="w-24">
+                    <div className="w-24 shrink-0">
                       <p className="text-[11px] text-[#8A8A9A] mb-1" style={{ fontFamily: 'var(--font-body)' }}>Прогресс</p>
                       <div className="flex items-center gap-2">
                         <Progress value={avgPct} className="h-1.5 flex-1" />

@@ -9,10 +9,20 @@ import { useAuth } from '../../context/AuthContext';
 import { CountUp } from '../../components/CountUp';
 import { motion } from 'motion/react';
 import { useMemo } from 'react';
+import { homeworkDeadline, lessonData } from '../../lib/lessonContent';
+import { localDayKey, plural, pluralize } from '../../lib/analytics';
+
+/** Сколько календарных дней (по локальному времени) осталось до срока */
+function daysUntil(iso: string): number {
+  const now = new Date();
+  const d = new Date(iso);
+  const startOf = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  return Math.round((startOf(d) - startOf(now)) / 86_400_000);
+}
 
 export function StudentDashboard() {
   const { user } = useAuth();
-  const { courses, enrollments, progress, getHomeworkForStudent, getCourseProgress, getCompletedLessonsCount } = useDataStore();
+  const { courses, enrollments, enrollmentRecords, progress, getHomeworkForStudent, getCourseProgress, getCompletedLessonsCount } = useDataStore();
 
   const myCourses = useMemo(() => {
     if (!user) return [];
@@ -36,7 +46,7 @@ export function StudentDashboard() {
     const dates = new Set<string>();
     for (const p of Object.values(userProgress)) {
       if (p.lastActivity) {
-        dates.add(new Date(p.lastActivity).toISOString().slice(0, 10));
+        dates.add(localDayKey(new Date(p.lastActivity)));
       }
     }
     let count = 0;
@@ -44,32 +54,41 @@ export function StudentDashboard() {
     for (let i = 0; i < 30; i++) {
       const d = new Date(today);
       d.setDate(today.getDate() - i);
-      if (dates.has(d.toISOString().slice(0, 10))) count++;
+      if (dates.has(localDayKey(d))) count++;
       else if (i > 0) break;
     }
     return count;
   }, [user, progress]);
 
+  // Задания, по которым от ученика ждут действия: ещё не сданные и возвращённые на доработку
   const pendingHomework = useMemo(() => {
     if (!user) return [];
     const userHw = getHomeworkForStudent(user.id);
-    const tasks: Array<{ courseTitle: string; lessonTitle: string; deadline?: string; lessonId: string }> = [];
+    const tasks: Array<{ courseId: string; courseTitle: string; lessonTitle: string; deadline?: string; lessonId: string; returned: boolean }> = [];
     for (const c of myCourses) {
+      const enrolledAt = enrollmentRecords.find(e => e.userId === user.id && e.courseId === c.id && e.status !== 'revoked')?.createdAt;
       for (const m of c.modules) {
         for (const l of m.lessons) {
-          if (l.type === 'homework' && !userHw.find(h => h.lessonId === l.id)) {
-            tasks.push({
-              courseTitle: c.title,
-              lessonTitle: l.title,
-              deadline: l.content?.data?.deadline,
-              lessonId: l.id,
-            });
-          }
+          if (l.type !== 'homework') continue;
+          const hw = userHw.find(h => h.lessonId === l.id);
+          if (hw && hw.status !== 'pending' && hw.status !== 'returned') continue;
+          tasks.push({
+            courseId: c.id,
+            courseTitle: c.title,
+            lessonTitle: l.title,
+            deadline: homeworkDeadline(lessonData(l), enrolledAt),
+            lessonId: l.id,
+            returned: hw?.status === 'returned',
+          });
         }
       }
     }
+    // Сначала то, что вернули на доработку, затем по ближайшему сроку
+    tasks.sort((a, b) => Number(b.returned) - Number(a.returned) || (a.deadline ?? '\uffff').localeCompare(b.deadline ?? '\uffff'));
     return tasks.slice(0, 4);
-  }, [user, myCourses, getHomeworkForStudent]);
+  }, [user, myCourses, enrollmentRecords, getHomeworkForStudent]);
+
+  const hasHomeworkLessons = myCourses.some(c => c.modules.some(m => m.lessons.some(l => l.type === 'homework')));
 
   const getNextLesson = (course: typeof myCourses[0]) => {
     for (const m of course.modules) {
@@ -94,7 +113,7 @@ export function StudentDashboard() {
           Привет, {user?.name?.split(' ')[0] || 'Ученик'}! 👋
         </h1>
         <p className="text-[13px] text-[#8A8A9A]" style={{ fontFamily: 'var(--font-body)' }}>
-          {streak > 0 ? `Вы учитесь ${streak} ${streak === 1 ? 'день' : 'дней'} подряд — так держать!` : 'Начните учиться сегодня'}
+          {streak > 0 ? `Вы учитесь ${pluralize(streak, ['день', 'дня', 'дней'])} подряд — так держать!` : 'Начните учиться сегодня'}
         </p>
       </div>
 
@@ -187,29 +206,36 @@ export function StudentDashboard() {
           {pendingHomework.length === 0 ? (
             <Card className="border-0">
               <CardContent className="p-6 text-center">
-                <p className="text-[13px] text-[#8A8A9A]" style={{ fontFamily: 'var(--font-body)' }}>Все задания сданы 🎉</p>
+                <p className="text-[13px] text-[#8A8A9A]" style={{ fontFamily: 'var(--font-body)' }}>
+                  {hasHomeworkLessons ? 'Все задания сданы 🎉' : 'Заданий пока нет'}
+                </p>
               </CardContent>
             </Card>
           ) : (
             <div className="space-y-3">
-              {pendingHomework.map((task, i) => {
-                const days = task.deadline ? Math.ceil((new Date(task.deadline).getTime() - Date.now()) / 86400000) : null;
+              {pendingHomework.map(task => {
+                const days = task.deadline ? daysUntil(task.deadline) : null;
                 return (
-                  <Card key={i} className="border-0">
-                    <CardContent className="p-4">
-                      <p className="text-[11px] text-[#8A8A9A] mb-1" style={{ fontFamily: 'var(--font-body)' }}>
-                        {task.courseTitle}
-                      </p>
-                      <p className="text-[13px] font-semibold text-[#1A1A2E] mb-2" style={{ fontFamily: 'var(--font-body)' }}>
-                        {task.lessonTitle}
-                      </p>
-                      {days !== null && (
-                        <Badge variant={days < 3 ? 'destructive' : days < 7 ? 'warning' : 'secondary'} className="text-[10px]">
-                          {days < 0 ? 'Просрочено' : days === 0 ? 'Сегодня' : `Осталось ${days} дн.`}
-                        </Badge>
-                      )}
-                    </CardContent>
-                  </Card>
+                  <Link key={task.lessonId} to={`/student/courses/${task.courseId}/lesson/${task.lessonId}`} className="block">
+                    <Card className="border-0 hover:shadow-[0_4px_20px_rgba(0,0,0,0.08)] transition-all">
+                      <CardContent className="p-4">
+                        <p className="text-[11px] text-[#8A8A9A] mb-1" style={{ fontFamily: 'var(--font-body)' }}>
+                          {task.courseTitle}
+                        </p>
+                        <p className="text-[13px] font-semibold text-[#1A1A2E] mb-2" style={{ fontFamily: 'var(--font-body)' }}>
+                          {task.lessonTitle}
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {task.returned && <Badge variant="warning" className="text-[10px]">На доработку</Badge>}
+                          {days !== null && (
+                            <Badge variant={days < 3 ? 'destructive' : days < 7 ? 'warning' : 'secondary'} className="text-[10px]">
+                              {days < 0 ? 'Просрочено' : days === 0 ? 'Сегодня' : `${plural(days, ['Остался', 'Осталось', 'Осталось'])} ${pluralize(days, ['день', 'дня', 'дней'])}`}
+                            </Badge>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
                 );
               })}
               <Link to="/student/homework">

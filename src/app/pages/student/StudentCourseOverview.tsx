@@ -9,6 +9,7 @@ import { useDataStore } from '../../store/DataStore';
 import { PageSkeleton } from '../../components/skeletons/PageSkeleton';
 import { flattenCourse, nextLessonToStudy } from '../../lib/courseAccess';
 import { LESSON_TYPE_LABELS } from '../../lib/lessonContent';
+import { plural } from '../../lib/analytics';
 
 export function StudentCourseOverview() {
   const { id } = useParams();
@@ -42,7 +43,7 @@ export function StudentCourseOverview() {
           {author && <p className="text-sm text-[#8A8A9A] mb-3">Автор: {author.name}</p>}
           {course.description && <p className="text-[14px] text-[#1A1A2E]/80 whitespace-pre-line mb-5">{course.description}</p>}
           <div className="flex items-center justify-between text-sm mb-2">
-            <span className="text-[#8A8A9A]">Пройдено {doneCount} из {flat.length} уроков</span>
+            <span className="text-[#8A8A9A]">Пройдено {doneCount} из {flat.length} {plural(flat.length, ['урока', 'уроков', 'уроков'])}</span>
             <span className="font-semibold">{pct}%</span>
           </div>
           <Progress value={pct} className="h-2 mb-5" />
@@ -53,7 +54,7 @@ export function StudentCourseOverview() {
               <p className="text-sm text-[#8A8A9A]">Автор ещё не добавил уроки.</p>
             )}
             {author && (
-              <Button asChild variant="outline"><Link to="/student/chat"><MessageSquare className="w-4 h-4 mr-2" />Написать автору</Link></Button>
+              <Button asChild variant="outline"><Link to={`/student/chat?with=${author.id}`}><MessageSquare className="w-4 h-4 mr-2" />Написать автору</Link></Button>
             )}
           </div>
         </CardContent>
