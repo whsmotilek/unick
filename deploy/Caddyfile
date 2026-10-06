@@ -1,0 +1,75 @@
+# Unick: HTTPS-прокси (Caddy, сертификаты Let's Encrypt выпускаются автоматически).
+# Кладётся на сервер в /opt/unick/proxy/Caddyfile. Домены задаются переменными окружения
+# контейнера: APP_DOMAIN (сайт) и PROXY_DOMAIN (API), см. docker-compose.unick.yml.
+
+{
+    # Запросы в формате JSON — их читает fail2ban (защита от перебора паролей и сканеров)
+    log access {
+        output file /var/log/caddy/access.log {
+            roll_size 50MiB
+            roll_keep 5
+        }
+        format json
+    }
+}
+
+(security_headers) {
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options nosniff
+        Referrer-Policy strict-origin-when-cross-origin
+        Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+        Cross-Origin-Opener-Policy same-origin
+        -server
+        -x-powered-by
+    }
+}
+
+# ---------- Платформа (SPA) ----------
+{$APP_DOMAIN} {
+    import security_headers
+    header {
+        X-Frame-Options SAMEORIGIN
+        # Источники: свой API, видео-плееры в уроках, шрифты Google, форма предзаписи (Apps Script)
+        Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' blob: https://{$PROXY_DOMAIN}; connect-src 'self' https://{$PROXY_DOMAIN} wss://{$PROXY_DOMAIN} https://script.google.com https://script.googleusercontent.com; frame-src https://www.youtube.com https://www.youtube-nocookie.com https://vk.com https://vkvideo.ru https://rutube.ru https://kinescope.io; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; upgrade-insecure-requests"
+    }
+    root * /srv/unick
+    encode zstd gzip
+    @assets path /assets/*
+    header @assets Cache-Control "public, max-age=31536000, immutable"
+    @html not path /assets/*
+    header @html Cache-Control "no-cache"
+    try_files {path} /index.html
+    file_server
+    log
+}
+
+# www и старый временный адрес — постоянный редирект на основной домен
+www.{$APP_DOMAIN}, unick.159-194-245-212.sslip.io {
+    redir https://{$APP_DOMAIN}{uri} permanent
+}
+
+# ---------- API Supabase ----------
+# Studio (панель базы) наружу НЕ публикуется: доступ только через SSH-туннель (deploy/README.md).
+{$PROXY_DOMAIN}, api.unick.159-194-245-212.sslip.io {
+    import security_headers
+    @supabase_api path /auth/v1/* /rest/v1/* /graphql/v1 /realtime/v1/* /storage/v1/* /functions/v1/*
+
+    # Загрузки файлов — до 55 МБ (лимит хранилища 50 МБ), остальные запросы — до 1 МБ
+    @upload path /storage/v1/*
+    request_body @upload {
+        max_size 55MB
+    }
+    @other not path /storage/v1/*
+    request_body @other {
+        max_size 1MB
+    }
+
+    handle @supabase_api {
+        reverse_proxy api-gw:8000
+    }
+    handle {
+        respond 404
+    }
+    log
+}

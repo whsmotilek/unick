@@ -37,7 +37,13 @@ const AUTH_ERRORS: Record<string, string> = {
   'User already registered': 'Пользователь с таким email уже существует',
   'Password should be at least 6 characters': 'Пароль должен быть не короче 6 символов',
 };
-const translate = (msg: string) => AUTH_ERRORS[msg] ?? msg;
+const translate = (msg: string) => {
+  if (AUTH_ERRORS[msg]) return AUTH_ERRORS[msg];
+  const min = msg.match(/at least (\d+) characters/);
+  if (min) return `Пароль должен быть не короче ${min[1]} символов`;
+  if (/rate limit|too many requests/i.test(msg)) return 'Слишком много попыток. Подождите несколько минут и попробуйте снова';
+  return msg;
+};
 
 async function fetchProfile(id: string): Promise<User | null> {
   if (!supabase) return null;

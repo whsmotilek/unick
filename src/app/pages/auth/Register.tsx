@@ -65,7 +65,7 @@ export function Register() {
   const submit = async (role: UserRole) => {
     if (!name.trim()) { toast.error('Введите имя'); return; }
     if (!email.trim()) { toast.error('Введите email'); return; }
-    if (password.length < 6) { toast.error('Пароль — минимум 6 символов'); return; }
+    if (password.length < 8) { toast.error('Пароль — минимум 8 символов'); return; }
     setIsLoading(true);
     const result = await register(name.trim(), email, password, role, {
       schoolName: role === 'author' ? schoolName.trim() : undefined,
@@ -106,7 +106,7 @@ export function Register() {
       </div>
       <div>
         <Label htmlFor={`${prefix}-password`}>Пароль</Label>
-        <Input id={`${prefix}-password`} type="password" autoComplete="new-password" placeholder="Минимум 6 символов" required value={password} onChange={e => setPassword(e.target.value)} className={inputClass} />
+        <Input id={`${prefix}-password`} type="password" autoComplete="new-password" placeholder="Минимум 8 символов" required value={password} onChange={e => setPassword(e.target.value)} className={inputClass} />
       </div>
     </>
   );

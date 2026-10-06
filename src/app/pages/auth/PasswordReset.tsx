@@ -70,7 +70,7 @@ export function ResetPassword() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (password.length < 6) { toast.error('Пароль — минимум 6 символов'); return; }
+    if (password.length < 8) { toast.error('Пароль — минимум 8 символов'); return; }
     setBusy(true);
     const r = await updatePassword(password);
     setBusy(false);

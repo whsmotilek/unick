@@ -3,23 +3,78 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Unick — платформа, где эксперт создаёт курс, публикует его на своей странице и ведёт учеников: уроки, домашние задания, прогресс." />
+    <meta name="description" content="Unick — платформа, где эксперт создаёт курс, публикует его и ведёт учеников: уроки, домашние задания, тесты, прогресс." />
+    <meta name="theme-color" content="#F5F4F2" />
     <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="preload" as="image" href="/brand/mark.png" />
     <title>Unick — платформа для авторов курсов</title>
-    <script>
-      // Восстановление пути после редиректа из 404.html (GitHub Pages SPA fallback)
-      (function (l) {
-        if (l.search[1] === '/') {
-          var decoded = l.search.slice(1).split('&').map(function (s) {
-            return s.replace(/~and~/g, '&');
-          }).join('?');
-          window.history.replaceState(null, '', l.pathname.slice(0, -1) + decoded + l.hash);
-        }
-      })(window.location);
-    </script>
-    <style>html, body { height: 100%; margin: 0; } #root { height: 100%; }</style>
+    <style>
+      html, body { height: 100%; margin: 0; background: #F5F4F2; }
+      #root { height: 100%; }
+
+      /* Экран загрузки: виден сразу, до загрузки JS; приложение убирает его, когда готово */
+      #boot {
+        position: fixed; inset: 0; z-index: 9999; overflow: hidden;
+        display: flex; align-items: center; justify-content: center;
+        background: #F5F4F2;
+        transition: opacity .45s ease, visibility .45s ease;
+      }
+      #boot.boot--hide { opacity: 0; visibility: hidden; }
+      #boot.boot--hide .boot__card { transform: scale(.96); }
+      .boot__blob { position: absolute; border-radius: 50%; filter: blur(60px); opacity: .55; animation: boot-drift 9s ease-in-out infinite alternate; }
+      .boot__blob--a { width: 340px; height: 340px; background: #EDE9FF; top: 18%; left: 22%; }
+      .boot__blob--b { width: 280px; height: 280px; background: #F9D0E8; bottom: 16%; right: 20%; animation-delay: -4s; }
+      .boot__blob--c { width: 220px; height: 220px; background: #B8D8F8; bottom: 30%; left: 30%; opacity: .35; animation-delay: -2s; }
+      .boot__card { position: relative; display: flex; flex-direction: column; align-items: center; gap: 22px; transition: transform .45s ease; }
+      .boot__ring {
+        position: relative; width: 104px; height: 104px; border-radius: 30px;
+        display: flex; align-items: center; justify-content: center;
+      }
+      .boot__ring::before {
+        content: ""; position: absolute; inset: -4px; border-radius: 34px; padding: 4px; z-index: 1;
+        background: conic-gradient(from var(--boot-angle, 0deg), #7C6AF7, #B9AEFB 25%, transparent 45%, transparent 70%, #7C6AF7);
+        -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+        -webkit-mask-composite: xor; mask-composite: exclude;
+        animation: boot-spin 1.4s linear infinite;
+      }
+      .boot__ring::after {
+        content: ""; position: absolute; inset: -28px; border-radius: 50%; z-index: -1;
+        background: radial-gradient(circle, rgba(124, 106, 247, .35) 0%, rgba(124, 106, 247, 0) 70%);
+        animation: boot-glow 2.4s ease-in-out infinite;
+      }
+      .boot__tile {
+        width: 104px; height: 104px; border-radius: 30px; background: #fff;
+        box-shadow: 0 18px 50px rgba(124, 106, 247, .18), 0 2px 8px rgba(26, 26, 46, .06);
+        display: flex; align-items: center; justify-content: center;
+        animation: boot-breathe 2.4s ease-in-out infinite;
+      }
+      .boot__tile img { width: 50px; height: auto; display: block; }
+      .boot__dots { display: flex; gap: 7px; }
+      .boot__dots i { width: 7px; height: 7px; border-radius: 50%; background: #7C6AF7; opacity: .25; animation: boot-dot 1.2s ease-in-out infinite; }
+      .boot__dots i:nth-child(2) { animation-delay: .15s; }
+      .boot__dots i:nth-child(3) { animation-delay: .3s; }
+      @property --boot-angle { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
+      @keyframes boot-spin { to { --boot-angle: 360deg; } }
+      @keyframes boot-glow { 0%, 100% { opacity: .55; transform: scale(.92); } 50% { opacity: 1; transform: scale(1.08); } }
+      @keyframes boot-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.04); } }
+      @keyframes boot-dot { 0%, 100% { opacity: .25; transform: translateY(0); } 40% { opacity: 1; transform: translateY(-4px); } }
+      @keyframes boot-drift { from { transform: translate(0, 0) scale(1); } to { transform: translate(40px, -30px) scale(1.12); } }
+      @media (prefers-reduced-motion: reduce) {
+        .boot__ring::before, .boot__ring::after, .boot__tile, .boot__dots i, .boot__blob { animation: none; }
+        .boot__dots i { opacity: .6; }
+      }
+    </style>
   </head>
   <body>
+    <div id="boot" role="status" aria-live="polite" aria-label="Загрузка Unick">
+      <div class="boot__blob boot__blob--a"></div>
+      <div class="boot__blob boot__blob--b"></div>
+      <div class="boot__blob boot__blob--c"></div>
+      <div class="boot__card">
+        <div class="boot__ring"><div class="boot__tile"><img src="/brand/mark.png" alt="" /></div></div>
+        <div class="boot__dots"><i></i><i></i><i></i></div>
+      </div>
+    </div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
