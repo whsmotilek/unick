@@ -1,5 +1,7 @@
+import { AuthorRequests } from '../../components/admin/AuthorRequests';
+import { NotificationBell } from '../../components/NotificationBell';
 import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import {
   LogOut, Users, School, BookOpen, GraduationCap, CheckCircle2, FileCheck, Target, UserPlus, RefreshCw,
 } from 'lucide-react';
@@ -86,6 +88,12 @@ export function AdminDashboard() {
         <span className="hidden sm:inline text-[12px] text-white/50 border-l border-white/15 pl-3" style={body}>Панель пилота</span>
         <div className="ml-auto flex items-center gap-2 min-w-0">
           <span className="hidden md:inline text-[12px] text-white/60 truncate max-w-[220px]" style={body}>{user?.email}</span>
+          {user?.schoolId && (
+            <Button asChild variant="ghost" size="sm" className="text-white/80 hover:text-white hover:bg-white/10">
+              <Link to="/author">Кабинет автора</Link>
+            </Button>
+          )}
+          <NotificationBell variant="dark" />
           <Button variant="ghost" size="sm" onClick={handleRefresh} disabled={refreshing} className="text-white/80 hover:text-white hover:bg-white/10" aria-label="Обновить данные">
             <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
           </Button>
@@ -128,6 +136,8 @@ export function AdminDashboard() {
           <h1 className="text-[24px] sm:text-[28px] font-bold text-[#1A1A2E]" style={heading}>Как идёт пилот</h1>
           <p className="text-[13px] text-[#8A8A9A]" style={body}>Все школы, курсы и ученики платформы</p>
         </div>
+
+        <AuthorRequests />
 
         {/* Цели пилота */}
         <Card className="border-0 mb-6">

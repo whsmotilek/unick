@@ -46,6 +46,8 @@ export interface Backend {
   submitQuiz(lessonId: string, answers: Record<string, string[]>): Promise<QuizResult>;
 
   markNotificationsRead(ids: string[]): Promise<void>;
+  /** Только администратор: решение по заявке автора */
+  setAuthorStatus(userId: string, status: 'pending' | 'approved' | 'rejected'): Promise<void>;
   saveHomework(hw: Homework): Promise<void>;
 
   sendMessage(msg: ChatMessage): Promise<void>;

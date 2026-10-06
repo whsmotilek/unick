@@ -9,6 +9,7 @@ import {
   Calendar,
   MessageSquare,
   FileCheck,
+  Shield,
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Button } from '../ui/button';
@@ -34,6 +35,7 @@ export function AuthorLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const nav = user?.role === 'admin' ? [...navigation, { name: 'Админка', href: '/admin', icon: Shield }] : navigation;
   const isActive = (path: string) => location.pathname === path || (path !== '/author' && location.pathname.startsWith(path + '/'));
 
   const handleLogout = () => {
@@ -73,7 +75,7 @@ export function AuthorLayout() {
 
   return (
     <div className="flex flex-col md:flex-row h-screen bg-[#F5F4F2]">
-      <MobileNav navigation={navigation} rootHref="/author" footer={userFooter} actions={<NotificationBell variant="dark" />} />
+      <MobileNav navigation={nav} rootHref="/author" footer={userFooter} actions={<NotificationBell variant="dark" />} />
 
       <aside className="hidden md:flex w-[200px] bg-[#1A1A2E] flex-col">
         <div className="p-6 pr-3 flex items-center justify-between gap-2">
@@ -84,7 +86,7 @@ export function AuthorLayout() {
         </div>
 
         <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
-          {navigation.map((item) => {
+          {nav.map((item) => {
             const active = isActive(item.href);
             return (
               <Link

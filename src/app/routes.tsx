@@ -78,13 +78,14 @@ export const router = createBrowserRouter([
   // Предпросмотр курса автором — полноэкранный, без бокового меню кабинета
   {
     path: '/author/courses/:id/preview/:lessonId',
-    element: <ProtectedRoute allowedRoles={['author', 'curator']}><StudentLesson /></ProtectedRoute>,
+    element: <ProtectedRoute allowedRoles={['author', 'curator', 'admin']} requireApprovedAuthor><StudentLesson /></ProtectedRoute>,
   },
 
   // Author
   {
     path: '/author',
-    element: <ProtectedRoute allowedRoles={['author']}><AuthorLayout /></ProtectedRoute>,
+    // Администратор тоже может вести свою школу в кабинете автора
+    element: <ProtectedRoute allowedRoles={['author', 'admin']} requireApprovedAuthor><AuthorLayout /></ProtectedRoute>,
     children: [
       { index: true, element: <AuthorDashboard /> },
       { path: 'courses', element: <AuthorCourses /> },

@@ -3,13 +3,16 @@ import { useAuth } from '../context/AuthContext';
 import { UserRole } from '../types';
 import { homeFor } from '../lib/navigation';
 import { PageSkeleton } from './skeletons/PageSkeleton';
+import { AuthorPending } from '../pages/author/AuthorPending';
 
 interface ProtectedRouteProps {
   allowedRoles?: UserRole[];
+  /** Для кабинета автора: пускать только одобренных авторов */
+  requireApprovedAuthor?: boolean;
   children?: React.ReactNode;
 }
 
-export function ProtectedRoute({ allowedRoles, children }: ProtectedRouteProps) {
+export function ProtectedRoute({ allowedRoles, requireApprovedAuthor, children }: ProtectedRouteProps) {
   const { user, isAuthenticated, loading } = useAuth();
   const location = useLocation();
 
@@ -22,6 +25,10 @@ export function ProtectedRoute({ allowedRoles, children }: ProtectedRouteProps) 
 
   if (allowedRoles && !allowedRoles.includes(user.role)) {
     return <Navigate to={homeFor(user)} replace />;
+  }
+
+  if (requireApprovedAuthor && user.role === 'author' && user.authorStatus !== 'approved') {
+    return <AuthorPending />;
   }
 
   return children ? <>{children}</> : <Outlet />;

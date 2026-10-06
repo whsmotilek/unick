@@ -23,6 +23,8 @@ interface AuthContextType {
   requestPasswordReset: (email: string) => Promise<AuthResult>;
   updatePassword: (password: string) => Promise<AuthResult>;
   updateProfile: (patch: { name?: string; avatar?: string }) => Promise<AuthResult>;
+  /** Перечитать профиль с сервера (например, проверить, одобрена ли заявка автора) */
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -128,6 +130,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       email: email.trim(),
       role,
       schoolId: role === 'author' ? `school-${id}` : undefined,
+      // В демо-режиме модерации нет: авторы сразу одобрены
+      authorStatus: role === 'author' ? 'approved' : undefined,
     };
     saveDemoUsers([...all, newUser]);
     setUser(newUser);
@@ -164,10 +168,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { success: true };
   }, [user]);
 
+  const refreshProfile = useCallback(async () => {
+    if (!user) return;
+    if (supabase) {
+      const profile = await fetchProfile(user.id);
+      if (profile) setUser(profile);
+    } else {
+      const fresh = getDemoUsers().find(u => u.id === user.id);
+      if (fresh) setUser(fresh);
+    }
+  }, [user]);
+
   return (
     <AuthContext.Provider value={{
       user, isAuthenticated: !!user, loading, isDemoMode,
-      login, register, logout, requestPasswordReset, updatePassword, updateProfile,
+      login, register, logout, requestPasswordReset, updatePassword, updateProfile, refreshProfile,
     }}>
       {children}
     </AuthContext.Provider>
