@@ -13,3 +13,6 @@ grant usage on schema public, auth, storage to anon, authenticated;
 grant select, insert, update, delete on storage.objects to authenticated;
 alter default privileges in schema public grant all on tables to anon, authenticated;
 alter default privileges in schema public grant execute on functions to anon, authenticated;
+alter table storage.buckets add column if not exists file_size_limit bigint;
+alter table storage.buckets add column if not exists allowed_mime_types text[];
+alter table storage.objects add column if not exists metadata jsonb;

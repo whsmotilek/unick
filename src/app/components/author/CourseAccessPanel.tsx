@@ -10,6 +10,15 @@ import { Progress } from '../ui/progress';
 import { useDataStore } from '../../store/DataStore';
 import { appUrl } from '../../lib/supabase';
 import type { Course, EnrollmentSource } from '../../types';
+import { pluralize } from '../../lib/analytics';
+
+/** «Вступили 3 человека из 10», «Вступил 1 человек», «Пока никто не вступил · 10 мест» */
+function joinedLabel(uses: number, maxUses?: number | null): string {
+  const limit = maxUses != null ? maxUses : null;
+  if (uses === 0) return limit != null ? `Пока никто не вступил · ${pluralize(limit, ['место', 'места', 'мест'])}` : 'Пока никто не вступил';
+  const verb = uses % 10 === 1 && uses % 100 !== 11 ? 'Вступил' : 'Вступили';
+  return `${verb} ${pluralize(uses, ['человек', 'человека', 'человек'])}${limit != null ? ` из ${limit}` : ''}`;
+}
 
 const SOURCE_LABELS: Record<EnrollmentSource, string> = {
   invite: 'По приглашению',
@@ -73,7 +82,7 @@ export function CourseAccessPanel({ course }: { course: Course }) {
       )}
 
       <Card className="border-0">
-        <CardContent className="p-6 space-y-4">
+        <CardContent className="p-4 sm:p-6 max-sm:[&:last-child]:pb-4 space-y-4">
           <div>
             <h3 className="text-[16px] font-semibold text-[#1A1A2E]" style={{ fontFamily: 'var(--font-heading)' }}>Ссылки-приглашения</h3>
             <p className="text-[13px] text-[#8A8A9A]">Отправьте ссылку ученикам. Перейдя по ней, ученик зарегистрируется и сразу получит доступ к курсу.</p>
@@ -81,11 +90,11 @@ export function CourseAccessPanel({ course }: { course: Course }) {
           <div className="flex flex-col sm:flex-row gap-2 sm:items-end">
             <div className="flex-1">
               <Label htmlFor="inv-label" className="text-xs">Название (для себя)</Label>
-              <Input id="inv-label" value={label} onChange={e => setLabel(e.target.value)} placeholder="Например: поток октябрь, чат в Telegram" className="mt-1 h-9" />
+              <Input id="inv-label" value={label} onChange={e => setLabel(e.target.value)} placeholder="Например: поток октябрь" className="mt-1 h-10 sm:h-9" />
             </div>
-            <div className="sm:w-40">
+            <div className="sm:w-40 max-sm:max-w-[50%]">
               <Label htmlFor="inv-max" className="text-xs">Лимит мест</Label>
-              <Input id="inv-max" type="number" min={1} value={maxUses} onChange={e => setMaxUses(e.target.value)} placeholder="без лимита" className="mt-1 h-9" />
+              <Input id="inv-max" type="number" min={1} value={maxUses} onChange={e => setMaxUses(e.target.value)} placeholder="без лимита" inputMode="numeric" className="mt-1 h-10 sm:h-9" />
             </div>
             <Button onClick={handleCreate}><Link2 className="w-4 h-4 mr-2" />Создать ссылку</Button>
           </div>
@@ -96,16 +105,19 @@ export function CourseAccessPanel({ course }: { course: Course }) {
                 const url = appUrl(`/join/${inv.code}`);
                 const exhausted = inv.maxUses != null && inv.uses >= inv.maxUses;
                 return (
-                  <li key={inv.id} className="py-3 flex flex-col sm:flex-row sm:items-center gap-2">
-                    <div className="flex-1 min-w-0">
+                  <li key={inv.id} className="py-3 flex flex-wrap sm:flex-nowrap items-center gap-x-2 gap-y-1.5">
+                    {/* На телефоне: название и ссылка — на всю ширину, ниже статус и кнопки одной строкой */}
+                    <div className="min-w-0 basis-full sm:basis-auto sm:flex-1">
                       <p className="text-sm font-medium text-[#1A1A2E] truncate">{inv.label || 'Приглашение'}</p>
-                      <p className="text-xs text-[#8A8A9A] truncate">{url}</p>
+                      <p className="text-xs text-[#8A8A9A] truncate" title={url}>{url}</p>
                     </div>
-                    <span className="text-xs text-[#8A8A9A] whitespace-nowrap">
-                      {inv.uses}{inv.maxUses != null ? ` / ${inv.maxUses}` : ''} вступили
+                    <span className="text-xs text-[#8A8A9A] whitespace-nowrap max-sm:order-2 max-sm:basis-full">
+                      {joinedLabel(inv.uses, inv.maxUses)}
                     </span>
-                    {!inv.active ? <Badge variant="secondary">Отключена</Badge> : exhausted ? <Badge variant="secondary">Мест нет</Badge> : <Badge variant="success">Активна</Badge>}
-                    <div className="flex gap-1">
+                    <span className="max-sm:order-3 max-sm:mr-auto">
+                      {!inv.active ? <Badge variant="secondary">Отключена</Badge> : exhausted ? <Badge variant="secondary">Мест нет</Badge> : <Badge variant="success">Активна</Badge>}
+                    </span>
+                    <div className="flex gap-1 shrink-0 max-sm:order-4 max-sm:-mr-2">
                       <Button variant="ghost" size="icon" aria-label="Скопировать ссылку" onClick={() => copy(url)}><Copy className="w-4 h-4" /></Button>
                       <Button variant="ghost" size="icon" aria-label={inv.active ? 'Отключить ссылку' : 'Включить ссылку'}
                         onClick={() => setInviteActive(inv.id, !inv.active)}>
@@ -121,18 +133,18 @@ export function CourseAccessPanel({ course }: { course: Course }) {
       </Card>
 
       <Card className="border-0">
-        <CardContent className="p-6 space-y-4">
+        <CardContent className="p-4 sm:p-6 max-sm:[&:last-child]:pb-4 space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
+            <div className="min-w-0">
               <h3 className="text-[16px] font-semibold text-[#1A1A2E]" style={{ fontFamily: 'var(--font-heading)' }}>
                 Ученики курса <span className="text-[#8A8A9A] font-normal">· {students.length}</span>
               </h3>
               <p className="text-[13px] text-[#8A8A9A]">Можно добавить уже зарегистрированного пользователя по email.</p>
             </div>
-            <div className="flex gap-2">
-              <Input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="email ученика" aria-label="Email ученика" className="h-9 sm:w-56"
+            <div className="flex gap-2 min-w-0">
+              <Input type="email" inputMode="email" autoComplete="off" value={email} onChange={e => setEmail(e.target.value)} placeholder="email ученика" aria-label="Email ученика" className="h-10 sm:h-9 sm:w-56 min-w-0"
                 onKeyDown={e => { if (e.key === 'Enter') handleEnroll(); }} />
-              <Button variant="outline" size="sm" onClick={handleEnroll} disabled={busy}><UserPlus className="w-4 h-4 mr-1" />Добавить</Button>
+              <Button variant="outline" size="sm" className="max-sm:h-10 shrink-0" onClick={handleEnroll} disabled={busy}><UserPlus className="w-4 h-4 mr-1" />Добавить</Button>
             </div>
           </div>
 
@@ -144,16 +156,22 @@ export function CourseAccessPanel({ course }: { course: Course }) {
                 const u = getUser(e.userId);
                 const pct = getCourseProgress(e.userId, course.id);
                 return (
-                  <li key={e.id} className="py-3 flex items-center gap-3">
+                  <li key={e.id} className="py-3 flex items-center gap-3 max-sm:gap-2">
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-[#1A1A2E] truncate">{u?.name || 'Ученик'}</p>
-                      <p className="text-xs text-[#8A8A9A] truncate">{u?.email} · {SOURCE_LABELS[e.source]} · {new Date(e.createdAt).toLocaleDateString('ru-RU')}</p>
+                      <p className="text-xs text-[#8A8A9A] truncate">{u?.email}<span className="hidden sm:inline"> · {SOURCE_LABELS[e.source]} · {new Date(e.createdAt).toLocaleDateString('ru-RU')}</span></p>
+                      {/* На телефоне: источник/дата и прогресс — отдельной строкой */}
+                      <div className="sm:hidden mt-1.5 flex items-center gap-2 text-[12px] text-[#8A8A9A]">
+                        <span className="truncate">{SOURCE_LABELS[e.source]} · {new Date(e.createdAt).toLocaleDateString('ru-RU')}</span>
+                        <Progress value={pct} className="h-1.5 flex-1 min-w-10 max-w-24 ml-auto" aria-label={`Прогресс ${pct}%`} />
+                        <span className="tabular-nums shrink-0">{pct}%</span>
+                      </div>
                     </div>
                     <div className="w-28 hidden sm:block">
                       <Progress value={pct} className="h-1.5" />
                       <p className="text-[11px] text-[#8A8A9A] mt-1 text-right">{pct}%</p>
                     </div>
-                    <Button variant="ghost" size="icon" aria-label="Закрыть доступ"
+                    <Button variant="ghost" size="icon" className="shrink-0 max-sm:-mr-2" aria-label="Закрыть доступ"
                       onClick={() => { if (window.confirm(`Закрыть доступ к курсу для ${u?.name || 'ученика'}?`)) unenrollStudent(e.userId, course.id); }}>
                       <UserMinus className="w-4 h-4 text-[#FF6B6B]" />
                     </Button>

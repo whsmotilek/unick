@@ -7,6 +7,7 @@ export const mockUsers: User[] = [
     name: 'Анна Иванова',
     email: 'anna@example.com',
     role: 'author',
+    authorStatus: 'approved',
     schoolId: 'school-1',
     avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop'
   },

@@ -47,18 +47,18 @@ export function HomeworkPanel({ courseId, lessonId, title, description, deadline
     <div className="space-y-4">
       {existing && (
         <div className="bg-[#F5F4F2] rounded-xl p-4 space-y-3">
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-[11px] font-semibold text-[#8A8A9A] uppercase tracking-wide">Ваше решение</p>
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <p className="text-[12px] font-semibold text-[#8A8A9A] uppercase tracking-wide">Ваше решение</p>
             <HomeworkStatusBadge status={existing.status} />
           </div>
           {existing.submission?.content && (
-            <p className="text-[13px] text-[#1A1A2E] whitespace-pre-line">{existing.submission.content}</p>
+            <p className="text-[14px] sm:text-[13px] leading-relaxed text-[#1A1A2E] whitespace-pre-line break-words">{existing.submission.content}</p>
           )}
           <FileList files={existing.files ?? []} bucket="homework-files" />
           {existing.feedback && (
             <div className="pt-3 border-t border-[#1A1A2E]/10">
-              <p className="text-[11px] font-semibold text-[#8A8A9A] mb-1 uppercase tracking-wide">Ответ автора</p>
-              <p className="text-[13px] text-[#1A1A2E] whitespace-pre-line">{existing.feedback}</p>
+              <p className="text-[12px] font-semibold text-[#8A8A9A] mb-1 uppercase tracking-wide">Ответ автора</p>
+              <p className="text-[14px] sm:text-[13px] leading-relaxed text-[#1A1A2E] whitespace-pre-line break-words">{existing.feedback}</p>
             </div>
           )}
         </div>
@@ -69,12 +69,14 @@ export function HomeworkPanel({ courseId, lessonId, title, description, deadline
           {existing?.status === 'returned' && (
             <p className="text-sm text-[#8B2F2F]">Автор вернул работу на доработку. Исправьте и отправьте снова.</p>
           )}
-          <Textarea rows={5} placeholder="Ваш ответ…" value={text} onChange={e => setText(e.target.value)} />
+          <Textarea rows={5} placeholder="Ваш ответ…" value={text} onChange={e => setText(e.target.value)}
+            className="min-h-32 rounded-xl bg-white border-[#1A1A2E]/10 px-4 py-3 text-base sm:text-sm" />
           <FileList files={files} bucket="homework-files" onRemove={i => setFiles(f => f.filter((_, idx) => idx !== i))} />
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2">
             <FileUpload bucket="homework-files" pathPrefix={`${courseId}/${user.id}`} label="Прикрепить файл"
+              className="w-full sm:w-auto h-11 sm:h-10 text-sm"
               onUploaded={f => setFiles(prev => [...prev, { path: f.path, name: f.name, size: f.size }])} />
-            <Button onClick={submit}><Send className="w-4 h-4 mr-2" />Отправить на проверку</Button>
+            <Button onClick={submit} className="w-full sm:w-auto h-11 sm:h-10"><Send className="w-4 h-4 mr-2" />Отправить на проверку</Button>
           </div>
         </div>
       )}

@@ -1,3 +1,4 @@
+import { AppLoader } from '../AppLoader';
 import { Skeleton } from '../ui/skeleton';
 
 export function DashboardSkeleton() {
@@ -40,15 +41,7 @@ export function CourseListSkeleton() {
   );
 }
 
+/** Загрузка страницы: фирменный индикатор вместо серых блоков (они мигали при обновлении) */
 export function PageSkeleton() {
-  return (
-    <div className="p-6 space-y-4">
-      <Skeleton className="h-8 w-64" />
-      <Skeleton className="h-4 w-96" />
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-        <Skeleton className="h-48 rounded-2xl" />
-        <Skeleton className="h-48 rounded-2xl" />
-      </div>
-    </div>
-  );
+  return <AppLoader />;
 }

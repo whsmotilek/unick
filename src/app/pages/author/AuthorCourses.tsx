@@ -10,12 +10,12 @@ import { useAuth } from '../../context/AuthContext';
 import { EmptyState } from '../../components/EmptyState';
 import { CountUp } from '../../components/CountUp';
 import { motion } from 'motion/react';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../../components/ui/alert-dialog';
-import { toast } from 'sonner';
+import { DeleteCourseDialog, countCourseStudents } from './AuthorCourseBuilder';
+import { pluralize } from '../../lib/analytics';
 
 export function AuthorCourses() {
   const { user } = useAuth();
-  const { courses, enrollments, deleteCourse, getCourseProgress } = useDataStore();
+  const { courses, enrollments, enrollmentRecords, getCourseProgress } = useDataStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
@@ -51,21 +51,13 @@ export function AuthorCourses() {
     return count ? Math.round(sum / count) : 0;
   }, [enrollments, myCourses, getCourseProgress]);
 
-  const handleDelete = () => {
-    if (!deleteId) return;
-    deleteCourse(deleteId);
-    toast.success('Курс удалён');
-    setDeleteId(null);
-  };
-
-  const studentsByCourse = (courseId: string) =>
-    Object.values(enrollments).filter(cids => cids.includes(courseId)).length;
+  const studentsByCourse = (courseId: string) => countCourseStudents(enrollmentRecords, courseId);
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
-        <div>
-          <h1 className="text-[28px] font-bold text-[#1A1A2E]" style={{ fontFamily: 'var(--font-heading)' }}>Курсы</h1>
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto">
+      <div className="flex items-center justify-between mb-4 sm:mb-6 flex-wrap gap-3">
+        <div className="min-w-0">
+          <h1 className="text-[24px] sm:text-[28px] font-bold text-[#1A1A2E]" style={{ fontFamily: 'var(--font-heading)' }}>Курсы</h1>
           <p className="text-[13px] text-[#8A8A9A]" style={{ fontFamily: 'var(--font-body)' }}>Управляйте всеми курсами вашей школы</p>
         </div>
         <Link to="/author/courses/new">
@@ -75,7 +67,7 @@ export function AuthorCourses() {
         </Link>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
         {[
           { label: 'Всего курсов', value: totalCourses, color: 'bg-[#EDE9FF]', text: 'text-[#7C6AF7]' },
           { label: 'Опубликовано', value: publishedCount, color: 'bg-[#C5E8A0]', text: 'text-[#2D5016]' },
@@ -83,9 +75,9 @@ export function AuthorCourses() {
           { label: 'Средний прогресс', value: avgCompletion, suffix: '%', color: 'bg-[#FFE5D9]', text: 'text-[#FF6B6B]' },
         ].map((stat, i) => (
           <Card key={i} className={`${stat.color} border-0`}>
-            <CardContent className="p-5">
-              <p className="text-[12px] text-[#1A1A2E]/60 mb-1" style={{ fontFamily: 'var(--font-body)' }}>{stat.label}</p>
-              <p className={`text-[28px] font-bold ${stat.text}`} style={{ fontFamily: 'var(--font-heading)' }}>
+            <CardContent className="p-4 sm:p-5">
+              <p className="text-[12px] text-[#1A1A2E]/60 mb-1 leading-tight" style={{ fontFamily: 'var(--font-body)' }}>{stat.label}</p>
+              <p className={`text-[24px] sm:text-[28px] font-bold ${stat.text}`} style={{ fontFamily: 'var(--font-heading)' }}>
                 <CountUp value={stat.value} suffix={stat.suffix} />
               </p>
             </CardContent>
@@ -93,8 +85,8 @@ export function AuthorCourses() {
         ))}
       </div>
 
-      <div className="mb-6">
-        <div className="relative max-w-md">
+      <div className="mb-4 sm:mb-6">
+        <div className="relative sm:max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8A8A9A]" />
           <Input
             placeholder="Поиск курсов..."
@@ -117,7 +109,7 @@ export function AuthorCourses() {
           ) : undefined}
         />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {filtered.map((course, i) => {
             const studentCount = studentsByCourse(course.id);
             const lessonCount = course.modules.reduce((s, m) => s + m.lessons.length, 0);
@@ -127,8 +119,9 @@ export function AuthorCourses() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3, delay: i * 0.05 }}
+                className="min-w-0"
               >
-                <Card className="border-0 overflow-hidden hover:shadow-[0_8px_30px_rgba(0,0,0,0.1)] transition-all hover:-translate-y-1 duration-300">
+                <Card className="border-0 overflow-hidden min-w-0 hover:shadow-[0_8px_30px_rgba(0,0,0,0.1)] transition-all hover:-translate-y-1 duration-300">
                   <Link to={`/author/courses/${course.id}`}>
                     <div className="aspect-video bg-[#F5F4F2] overflow-hidden">
                       {course.cover ? (
@@ -140,35 +133,35 @@ export function AuthorCourses() {
                       )}
                     </div>
                   </Link>
-                  <CardContent className="p-5">
+                  <CardContent className="p-4 sm:p-5 min-w-0">
                     <div className="flex items-center justify-between mb-2">
                       <Badge variant={course.status === 'published' ? 'success' : 'secondary'}>
                         {course.status === 'published' ? 'Опубликован' : 'Черновик'}
                       </Badge>
                     </div>
                     <Link to={`/author/courses/${course.id}`}>
-                      <h3 className="text-[16px] font-semibold text-[#1A1A2E] mb-1 line-clamp-2 hover:text-[#7C6AF7] transition-colors" style={{ fontFamily: 'var(--font-heading)' }}>
+                      <h3 className="text-[16px] font-semibold text-[#1A1A2E] mb-1 line-clamp-2 break-words [overflow-wrap:anywhere] hover:text-[#7C6AF7] transition-colors" style={{ fontFamily: 'var(--font-heading)' }}>
                         {course.title}
                       </h3>
                     </Link>
-                    <p className="text-[12px] text-[#8A8A9A] mb-4 line-clamp-2" style={{ fontFamily: 'var(--font-body)' }}>
+                    <p className="text-[12px] text-[#8A8A9A] mb-4 line-clamp-2 break-words [overflow-wrap:anywhere]" style={{ fontFamily: 'var(--font-body)' }}>
                       {course.description || 'Нет описания'}
                     </p>
-                    <div className="flex items-center justify-between text-[12px] text-[#8A8A9A] mb-4" style={{ fontFamily: 'var(--font-body)' }}>
+                    <div className="flex items-center justify-between gap-3 text-[12px] text-[#8A8A9A] mb-4" style={{ fontFamily: 'var(--font-body)' }}>
                       <span className="flex items-center gap-1">
-                        <BookOpen className="w-3.5 h-3.5" />{lessonCount} уроков
+                        <BookOpen className="w-3.5 h-3.5" />{pluralize(lessonCount, ['урок', 'урока', 'уроков'])}
                       </span>
                       <span className="flex items-center gap-1">
-                        <Users className="w-3.5 h-3.5" />{studentCount} учеников
+                        <Users className="w-3.5 h-3.5" />{pluralize(studentCount, ['ученик', 'ученика', 'учеников'])}
                       </span>
                     </div>
                     <div className="flex gap-2">
                       <Link to={`/author/courses/${course.id}`} className="flex-1">
-                        <Button variant="outline" size="sm" className="w-full">
+                        <Button variant="outline" size="sm" className="w-full max-sm:h-10">
                           <Edit className="w-3.5 h-3.5 mr-1" />Редактировать
                         </Button>
                       </Link>
-                      <Button variant="ghost" size="icon" onClick={() => setDeleteId(course.id)}>
+                      <Button variant="ghost" size="icon" aria-label="Удалить курс" onClick={() => setDeleteId(course.id)}>
                         <Trash2 className="w-4 h-4 text-[#FF6B6B]" />
                       </Button>
                     </div>
@@ -180,18 +173,8 @@ export function AuthorCourses() {
         </div>
       )}
 
-      <AlertDialog open={!!deleteId} onOpenChange={(o) => !o && setDeleteId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Удалить курс?</AlertDialogTitle>
-            <AlertDialogDescription>Это действие нельзя отменить. Все ученики будут отчислены.</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Отмена</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-[#FF6B6B] hover:bg-[#E55555]">Удалить</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteCourseDialog course={courses.find(c => c.id === deleteId)} open={!!deleteId}
+        onOpenChange={o => !o && setDeleteId(null)} />
     </div>
   );
 }

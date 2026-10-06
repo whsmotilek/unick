@@ -177,7 +177,8 @@ export function createSupabaseBackend(sb: SupabaseClient): Backend {
     },
 
     async uploadFile(bucket: FileBucket, path: string, file: File) {
-      check(await sb.storage.from(bucket).upload(path, file, { upsert: true, contentType: file.type || undefined }));
+      // Пути уникальны (uuid), поэтому без upsert: для перезаписи нужна была бы ещё политика UPDATE
+      check(await sb.storage.from(bucket).upload(path, file, { upsert: false, contentType: file.type || undefined }));
       if (bucket === 'covers') return sb.storage.from(bucket).getPublicUrl(path).data.publicUrl;
       return path;
     },

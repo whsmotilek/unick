@@ -133,23 +133,27 @@ export function WaitlistPopup() {
   return (
     <>
       <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-        <DialogContent className="max-w-md p-0 overflow-hidden border-0 rounded-[24px] bg-[#F5F4F2] sm:max-w-md">
-          <div className="bg-gradient-to-br from-[#7C6AF7] to-[#9B8AF9] p-6 text-white relative overflow-hidden">
+        <DialogContent
+          className="max-w-[calc(100%-1.5rem)] sm:max-w-md p-0 max-sm:p-0 overflow-x-hidden overflow-y-auto overscroll-contain max-h-[calc(100dvh-1.5rem)] border-0 rounded-[24px] bg-[#F5F4F2]
+            [&>button:last-child]:top-3 [&>button:last-child]:right-3 [&>button:last-child]:size-10 [&>button:last-child]:flex [&>button:last-child]:items-center [&>button:last-child]:justify-center
+            [&>button:last-child]:rounded-full [&>button:last-child]:text-white [&>button:last-child]:opacity-90 [&>button:last-child]:bg-white/15 [&>button:last-child]:hover:bg-white/25 [&>button:last-child_svg]:size-5"
+        >
+          <div className="bg-gradient-to-br from-[#7C6AF7] to-[#9B8AF9] p-5 pr-14 sm:p-6 sm:pr-14 text-white relative overflow-hidden">
             <div
               className="inline-flex items-center gap-1.5 bg-white/20 rounded-full px-3 py-1 mb-3"
               style={{ fontFamily: 'var(--font-body)' }}
             >
               <Sparkles className="w-3.5 h-3.5" />
-              <span className="text-[11px] font-medium">Закрытый бета-доступ</span>
+              <span className="text-[12px] font-medium">Закрытый бета-доступ</span>
             </div>
             <DialogTitle
-              className="text-[24px] font-bold leading-tight mb-2"
+              className="text-[22px] sm:text-[24px] font-bold leading-tight mb-2"
               style={{ fontFamily: 'var(--font-heading)' }}
             >
               {submitted ? 'Вы уже в списке' : 'Запишитесь в waitlist'}
             </DialogTitle>
             <DialogDescription
-              className="text-white/85 text-[13px] leading-relaxed"
+              className="text-white/90 text-[14px] sm:text-[13px] leading-relaxed"
               style={{ fontFamily: 'var(--font-body)' }}
             >
               {submitted
@@ -178,7 +182,7 @@ export function WaitlistPopup() {
               </p>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="p-6 space-y-4" noValidate>
+            <form onSubmit={handleSubmit} className="p-5 sm:p-6 space-y-4" noValidate>
               <div className="space-y-1.5">
                 <Label
                   htmlFor="wl-name"
@@ -192,13 +196,13 @@ export function WaitlistPopup() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Ваше имя"
-                  className="h-11 bg-white border-[#E5E5E0]"
+                  className="h-11 bg-white border-[#E5E5E0] text-base sm:text-sm"
                   aria-invalid={!!errors.name || undefined}
                   disabled={sending}
                 />
                 {errors.name && (
                   <p
-                    className="text-[11px] text-[#E65A5A]"
+                    className="text-[12px] text-[#E65A5A]"
                     style={{ fontFamily: 'var(--font-body)' }}
                   >
                     {errors.name}
@@ -220,13 +224,13 @@ export function WaitlistPopup() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@school.com"
-                  className="h-11 bg-white border-[#E5E5E0]"
+                  className="h-11 bg-white border-[#E5E5E0] text-base sm:text-sm"
                   aria-invalid={!!errors.email || undefined}
                   disabled={sending}
                 />
                 {errors.email && (
                   <p
-                    className="text-[11px] text-[#E65A5A]"
+                    className="text-[12px] text-[#E65A5A]"
                     style={{ fontFamily: 'var(--font-body)' }}
                   >
                     {errors.email}
@@ -248,13 +252,13 @@ export function WaitlistPopup() {
                   onChange={(e) => setProject(e.target.value)}
                   placeholder="Какие курсы планируете запускать? Аудитория, формат, цели..."
                   rows={4}
-                  className="bg-white border-[#E5E5E0] rounded-xl text-sm"
+                  className="bg-white border-[#E5E5E0] rounded-xl px-4 py-3 text-base sm:text-sm"
                   aria-invalid={!!errors.project || undefined}
                   disabled={sending}
                 />
                 {errors.project && (
                   <p
-                    className="text-[11px] text-[#E65A5A]"
+                    className="text-[12px] text-[#E65A5A]"
                     style={{ fontFamily: 'var(--font-body)' }}
                   >
                     {errors.project}
@@ -278,7 +282,7 @@ export function WaitlistPopup() {
                 )}
               </Button>
               <p
-                className="text-[11px] text-[#8A8A9A] text-center"
+                className="text-[12px] leading-relaxed text-[#8A8A9A] text-center"
                 style={{ fontFamily: 'var(--font-body)' }}
               >
                 Нажимая «Записаться», вы даёте{' '}
@@ -296,7 +300,7 @@ export function WaitlistPopup() {
         <button
           type="button"
           onClick={open}
-          className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 px-5 py-3 rounded-[16px] bg-[#1A1A2E] text-white shadow-[0_8px_30px_rgba(26,26,46,0.35)] hover:shadow-[0_12px_40px_rgba(26,26,46,0.45)] transition-shadow active:scale-[0.98]"
+          className="fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 pl-3 pr-5 py-2.5 sm:px-5 sm:py-3 max-w-[calc(100%-2rem)] whitespace-nowrap rounded-[16px] bg-[#1A1A2E] text-white shadow-[0_8px_30px_rgba(26,26,46,0.35)] hover:shadow-[0_12px_40px_rgba(26,26,46,0.45)] transition-shadow active:scale-[0.98]"
           style={{ fontFamily: 'var(--font-body)' }}
           aria-label="Записаться в waitlist"
         >
@@ -307,7 +311,7 @@ export function WaitlistPopup() {
             <span className="block text-[13px] font-semibold leading-tight">
               Запишитесь в waitlist
             </span>
-            <span className="block text-[11px] text-white/70 leading-tight">
+            <span className="block text-[12px] text-white/70 leading-tight mt-0.5">
               Ранний доступ к Unick
             </span>
           </span>

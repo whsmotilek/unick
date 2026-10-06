@@ -23,47 +23,8 @@ setv ADDITIONAL_REDIRECT_URLS "https://$APP/**,https://www.$APP/**,https://$OLD_
 setv PROXY_DOMAIN "$API"
 sed -i "s|APP_DOMAIN: .*|APP_DOMAIN: $APP|" docker-compose.unick.yml
 
-cat > /opt/unick/proxy/Caddyfile <<CADDY
-# Платформа (SPA)
-{\$APP_DOMAIN} {
-    root * /srv/unick
-    encode zstd gzip
-    @assets path /assets/*
-    header @assets Cache-Control "public, max-age=31536000, immutable"
-    header {
-        X-Content-Type-Options nosniff
-        Referrer-Policy strict-origin-when-cross-origin
-        X-Frame-Options SAMEORIGIN
-        Strict-Transport-Security "max-age=31536000"
-        -server
-    }
-    try_files {path} /index.html
-    file_server
-}
-
-# www и старый временный адрес — постоянный редирект на основной домен
-www.{\$APP_DOMAIN}, $OLD_APP {
-    redir https://{\$APP_DOMAIN}{uri} permanent
-}
-
-# API Supabase + Studio (Studio под паролем). Старый API-адрес оставлен для уже открытых вкладок.
-{\$PROXY_DOMAIN}, $OLD_API {
-    @supabase_api path /auth/v1/* /rest/v1/* /graphql/v1 /realtime/v1/* /storage/v1/* /functions/v1/* /sso/* /.well-known/oauth-authorization-server
-
-    handle @supabase_api {
-        reverse_proxy api-gw:8000
-    }
-
-    handle {
-        basic_auth {
-            {\$PROXY_AUTH_USERNAME} {\$PROXY_AUTH_PASSWORD}
-        }
-        reverse_proxy studio:3000
-    }
-
-    header -server
-}
-CADDY
+# Caddyfile с переменными {$APP_DOMAIN}/{$PROXY_DOMAIN} — из репозитория (deploy/Caddyfile)
+cp /opt/unick/Caddyfile /opt/unick/proxy/Caddyfile
 
 docker compose up -d --force-recreate auth caddy studio storage >/dev/null
 sleep 20

@@ -13,7 +13,7 @@ function ToolbarButton({ onClick, active, label, children }: { onClick: () => vo
       onClick={onClick}
       title={label}
       aria-label={label}
-      className={`p-1.5 rounded-md transition-colors ${active ? 'bg-[#EDE9FF] text-[#7C6AF7]' : 'text-[#1A1A2E]/70 hover:bg-[#F5F4F2]'}`}
+      className={`inline-flex items-center justify-center p-1.5 max-sm:size-10 rounded-md touch-manipulation transition-colors ${active ? 'bg-[#EDE9FF] text-[#7C6AF7]' : 'text-[#1A1A2E]/70 hover:bg-[#F5F4F2]'}`}
     >
       {children}
     </button>
@@ -30,7 +30,7 @@ function Toolbar({ editor }: { editor: Editor }) {
   };
   const i = 'w-4 h-4';
   return (
-    <div className="flex flex-wrap gap-0.5 border-b border-[#1A1A2E]/10 p-1.5">
+    <div className="flex flex-wrap gap-0.5 border-b border-[#1A1A2E]/10 p-1.5 max-sm:p-1">
       <ToolbarButton label="Жирный" active={editor.isActive('bold')} onClick={() => editor.chain().focus().toggleBold().run()}><Bold className={i} /></ToolbarButton>
       <ToolbarButton label="Курсив" active={editor.isActive('italic')} onClick={() => editor.chain().focus().toggleItalic().run()}><Italic className={i} /></ToolbarButton>
       <ToolbarButton label="Заголовок" active={editor.isActive('heading', { level: 2 })} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}><Heading2 className={i} /></ToolbarButton>
@@ -57,7 +57,8 @@ export function RichTextEditor({ value, onChange, placeholder }: { value: string
     onUpdate: ({ editor: e }) => onChange(e.isEmpty ? '' : e.getHTML()),
     editorProps: {
       attributes: {
-        class: 'lesson-content min-h-[200px] max-h-[50vh] overflow-y-auto px-4 py-3 focus:outline-none',
+        // max-sm:text-base — 16px, чтобы iOS не увеличивал страницу при фокусе
+        class: 'lesson-content min-h-[200px] max-h-[50vh] overflow-y-auto px-4 py-3 focus:outline-none max-sm:min-h-[160px] max-sm:!text-[16px]',
         role: 'textbox',
         'aria-multiline': 'true',
         'aria-label': placeholder ?? 'Текст урока',

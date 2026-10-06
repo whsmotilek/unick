@@ -126,25 +126,29 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
   );
 
   const [data, setData] = useState<Snapshot>(EMPTY);
-  const [loading, setLoading] = useState(true);
+  // Для какого пользователя загружены данные (undefined — ещё ни для кого).
+  // «Загрузка» = данные не для текущего пользователя: так не бывает момента, когда пользователь
+  // уже известен, а данные ещё старые (из-за этого мигали заглушки при обновлении страницы).
+  const [loadedFor, setLoadedFor] = useState<string | null | undefined>(undefined);
+  const loading = loadedFor !== (user?.id ?? null);
   const lastLoad = useRef(0);
 
   const refresh = useCallback(async () => {
     const u = userRef.current;
-    if (!u) { setData(EMPTY); setLoading(false); return; }
+    if (!u) { setData(EMPTY); setLoadedFor(null); return; }
     try {
       const snap = await backend.load(u);
       lastLoad.current = Date.now();
+      if (userRef.current?.id !== u.id) return; // пользователь сменился, пока шла загрузка
       setData(snap);
     } catch (e) {
       toast.error(`Не удалось загрузить данные: ${errorMessage(e)}`);
     } finally {
-      setLoading(false);
+      if (userRef.current?.id === u.id) setLoadedFor(u.id);
     }
   }, [backend]);
 
   useEffect(() => {
-    setLoading(true);
     refresh();
   }, [user?.id, refresh]);
 

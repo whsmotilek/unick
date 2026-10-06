@@ -8,13 +8,11 @@ import {
 
   User,
   LogOut,
-  Trophy,
   Calendar,
   Compass,
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Button } from '../ui/button';
-import { Badge } from '../ui/badge';
 import { useAuth } from '../../context/AuthContext';
 import { useDataStore } from '../../store/DataStore';
 import { MobileNav } from '../MobileNav';
@@ -22,6 +20,7 @@ import { NotificationBell } from '../NotificationBell';
 import { DemoBanner } from '../DemoBanner';
 import { motion } from 'motion/react';
 import logoWhiteFull from '@/assets/logo/logo-full-white.png';
+import { plural } from '../../lib/analytics';
 
 const navigation = [
   { name: 'Главная', href: '/student', icon: LayoutDashboard },
@@ -38,7 +37,7 @@ export function StudentLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const { getCompletedLessonsCount } = useDataStore();
+  const { getCompletedLessonsCount, getCourseProgress, enrollments } = useDataStore();
   const isActive = (path: string) => location.pathname === path || (path !== '/student' && location.pathname.startsWith(path + '/'));
 
   const handleLogout = () => {
@@ -47,60 +46,52 @@ export function StudentLayout() {
   };
 
   const completedCount = user ? getCompletedLessonsCount(user.id) : 0;
-  const level = Math.floor(completedCount / 5) + 1;
-  const lessonsToNext = 5 - (completedCount % 5);
-  const levelProgress = ((5 - lessonsToNext) / 5) * 100;
+  const myCourseIds = user ? enrollments[user.id] ?? [] : [];
+  const activeCourses = user ? myCourseIds.filter(cid => getCourseProgress(user.id, cid) < 100).length : 0;
 
   const userFooter = (
     <>
       <div className="flex items-center gap-3 mb-3">
-        <div className="relative">
-          <Avatar className="w-10 h-10">
-            <AvatarImage src={user?.avatar} />
-            <AvatarFallback className="bg-[#7C6AF7] text-white text-sm">
-              {user?.name?.charAt(0) || 'U'}
-            </AvatarFallback>
-          </Avatar>
-          <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-[#F5E642] rounded-full flex items-center justify-center border-2 border-[#1A1A2E]">
-            <Trophy className="w-2.5 h-2.5 text-[#1A1A2E]" />
-          </div>
-        </div>
+        <Avatar className="w-10 h-10">
+          <AvatarImage src={user?.avatar} />
+          <AvatarFallback className="bg-[#7C6AF7] text-white text-sm">
+            {user?.name?.charAt(0) || 'U'}
+          </AvatarFallback>
+        </Avatar>
         <div className="flex-1 min-w-0">
-          <p className="text-white text-xs font-medium truncate" style={{ fontFamily: 'var(--font-body)' }}>
+          <p className="text-white text-[13px] font-medium truncate" style={{ fontFamily: 'var(--font-body)' }}>
             {user?.name || 'Ученик'}
           </p>
-          <Badge variant="secondary" className="text-[10px] mt-1 h-4 px-1.5 bg-white/15 text-white border-0">
-            Уровень {level}
-          </Badge>
+          <p className="text-[12px] text-white/50 truncate" style={{ fontFamily: 'var(--font-body)' }}>
+            {user?.email}
+          </p>
         </div>
       </div>
 
-      <div className="bg-gradient-to-br from-[#7C6AF7] to-[#9B8AF9] rounded-lg p-3 text-white mb-3">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-[11px] font-medium" style={{ fontFamily: 'var(--font-body)' }}>До уровня {level + 1}</span>
-          <span className="text-sm font-bold" style={{ fontFamily: 'var(--font-heading)' }}>{Math.round(levelProgress)}%</span>
+      {/* Простая сводка по учёбе: без уровней и прочей геймификации */}
+      <div className="grid grid-cols-2 gap-2 mb-3 rounded-lg bg-white/10 p-3 text-white">
+        <div>
+          <p className="text-[16px] font-bold leading-none" style={{ fontFamily: 'var(--font-heading)' }}>{completedCount}</p>
+          <p className="text-[12px] leading-tight text-white/60 mt-1" style={{ fontFamily: 'var(--font-body)' }}>
+            {plural(completedCount, ['урок пройден', 'урока пройдено', 'уроков пройдено'])}
+          </p>
         </div>
-        <div className="w-full bg-white/20 rounded-full h-1.5">
-          <motion.div
-            className="bg-white rounded-full h-1.5"
-            initial={{ width: 0 }}
-            animate={{ width: `${levelProgress}%` }}
-            transition={{ duration: 1, ease: 'easeOut' }}
-          />
+        <div>
+          <p className="text-[16px] font-bold leading-none" style={{ fontFamily: 'var(--font-heading)' }}>{activeCourses}</p>
+          <p className="text-[12px] leading-tight text-white/60 mt-1" style={{ fontFamily: 'var(--font-body)' }}>
+            {plural(activeCourses, ['курс в процессе', 'курса в процессе', 'курсов в процессе'])}
+          </p>
         </div>
-        <p className="text-[10px] mt-1.5 opacity-90" style={{ fontFamily: 'var(--font-body)' }}>
-          {lessonsToNext} {lessonsToNext === 1 ? 'урок' : 'уроков'} до уровня
-        </p>
       </div>
 
       <Button
         variant="ghost"
         size="sm"
         onClick={handleLogout}
-        className="w-full justify-start gap-2 text-white/50 hover:text-white hover:bg-white/10 h-8"
+        className="w-full justify-start gap-2 text-white/60 hover:text-white hover:bg-white/10 h-10"
       >
         <LogOut className="w-4 h-4" />
-        <span className="text-xs">Выйти</span>
+        <span className="text-[13px]">Выйти</span>
       </Button>
     </>
   );

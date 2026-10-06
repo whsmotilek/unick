@@ -62,14 +62,14 @@ function Terms() {
 export function LegalPage() {
   const { doc } = useParams();
   return (
-    <div className="min-h-screen bg-[#F5F4F2] py-10 px-4">
+    <div className="min-h-screen bg-[#F5F4F2] py-6 sm:py-10 px-4">
       <div className="max-w-3xl mx-auto">
-        <Link to="/" className="inline-block mb-6"><img src={logoBlackFull} alt="Unick" className="h-7" /></Link>
-        <article className="lesson-content bg-white rounded-2xl p-6 sm:p-10">
+        <Link to="/" className="inline-flex items-center min-h-11 mb-3 sm:mb-6"><img src={logoBlackFull} alt="Unick" className="h-6 sm:h-7" /></Link>
+        <article className="lesson-content bg-white rounded-2xl p-5 sm:p-10">
           {doc === 'terms' ? <Terms /> : <Privacy />}
         </article>
-        <p className="text-center text-xs text-[#8A8A9A] mt-6">
-          <Link to="/legal/privacy" className="underline">Политика ПДн</Link> · <Link to="/legal/terms" className="underline">Условия использования</Link>
+        <p className="text-center text-[13px] text-[#8A8A9A] mt-4 sm:mt-6">
+          <Link to="/legal/privacy" className="underline inline-flex items-center min-h-11 px-2">Политика ПДн</Link> · <Link to="/legal/terms" className="underline inline-flex items-center min-h-11 px-2">Условия использования</Link>
         </p>
       </div>
     </div>

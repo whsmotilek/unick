@@ -9,6 +9,7 @@ import { useDataStore } from '../../store/DataStore';
 import { PageSkeleton } from '../../components/skeletons/PageSkeleton';
 import { flattenCourse, nextLessonToStudy } from '../../lib/courseAccess';
 import { LESSON_TYPE_LABELS } from '../../lib/lessonContent';
+import { plural } from '../../lib/analytics';
 
 export function StudentCourseOverview() {
   const { id } = useParams();
@@ -33,27 +34,27 @@ export function StudentCourseOverview() {
 
   return (
     <div className="p-4 sm:p-6 max-w-4xl mx-auto">
-      <Link to="/student/courses" className="text-[12px] text-[#8A8A9A] hover:text-[#1A1A2E] mb-4 inline-block">← Мои курсы</Link>
+      <Link to="/student/courses" className="text-[13px] text-[#8A8A9A] hover:text-[#1A1A2E] mb-2 sm:mb-4 inline-flex items-center min-h-10 -ml-1 px-1">← Мои курсы</Link>
 
-      <Card className="border-0 overflow-hidden mb-6">
-        {course.cover && <img src={course.cover} alt="" className="w-full h-48 object-cover" />}
-        <CardContent className="p-6">
-          <h1 className="text-[24px] sm:text-[28px] font-bold text-[#1A1A2E] mb-2" style={{ fontFamily: 'var(--font-heading)' }}>{course.title}</h1>
+      <Card className="border-0 overflow-hidden mb-6 gap-0">
+        {course.cover && <img src={course.cover} alt="" className="w-full h-40 sm:h-48 object-cover" />}
+        <CardContent className="p-5 sm:p-6">
+          <h1 className="text-[24px] sm:text-[28px] leading-tight font-bold text-[#1A1A2E] mb-2 break-words" style={{ fontFamily: 'var(--font-heading)' }}>{course.title}</h1>
           {author && <p className="text-sm text-[#8A8A9A] mb-3">Автор: {author.name}</p>}
           {course.description && <p className="text-[14px] text-[#1A1A2E]/80 whitespace-pre-line mb-5">{course.description}</p>}
-          <div className="flex items-center justify-between text-sm mb-2">
-            <span className="text-[#8A8A9A]">Пройдено {doneCount} из {flat.length} уроков</span>
+          <div className="flex items-center justify-between gap-3 text-sm mb-2">
+            <span className="text-[#8A8A9A]">Пройдено {doneCount} из {flat.length} {plural(flat.length, ['урока', 'уроков', 'уроков'])}</span>
             <span className="font-semibold">{pct}%</span>
           </div>
           <Progress value={pct} className="h-2 mb-5" />
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2">
             {nextUp ? (
-              <Button asChild><Link to={`/student/courses/${course.id}/lesson/${nextUp.lesson.id}`}>{doneCount === 0 ? 'Начать обучение' : pct === 100 ? 'Повторить курс' : 'Продолжить'}<ArrowRight className="w-4 h-4 ml-2" /></Link></Button>
+              <Button asChild className="h-11 sm:h-10"><Link to={`/student/courses/${course.id}/lesson/${nextUp.lesson.id}`}>{doneCount === 0 ? 'Начать обучение' : pct === 100 ? 'Повторить курс' : 'Продолжить'}<ArrowRight className="w-4 h-4 ml-2" /></Link></Button>
             ) : (
               <p className="text-sm text-[#8A8A9A]">Автор ещё не добавил уроки.</p>
             )}
             {author && (
-              <Button asChild variant="outline"><Link to="/student/chat"><MessageSquare className="w-4 h-4 mr-2" />Написать автору</Link></Button>
+              <Button asChild variant="outline" className="h-11 sm:h-10"><Link to={`/student/chat?with=${author.id}`}><MessageSquare className="w-4 h-4 mr-2" />Написать автору</Link></Button>
             )}
           </div>
         </CardContent>
@@ -65,18 +66,18 @@ export function StudentCourseOverview() {
           const items = flat.filter(l => l.module.id === m.id);
           return (
             <Card key={m.id} className="border-0">
-              <CardContent className="p-0">
-                <div className="px-5 py-4 border-b border-[#1A1A2E]/5 flex items-center justify-between">
-                  <p className="font-semibold text-[14px] text-[#1A1A2E]">{mi + 1}. {m.title}</p>
-                  <span className="text-xs text-[#8A8A9A]">{items.filter(i => i.completed).length}/{items.length}</span>
+              <CardContent className="p-0 [&:last-child]:pb-2">
+                <div className="px-4 sm:px-5 py-4 border-b border-[#1A1A2E]/5 flex items-center justify-between gap-3">
+                  <p className="font-semibold text-[14px] text-[#1A1A2E] min-w-0">{mi + 1}. {m.title}</p>
+                  <span className="text-xs text-[#8A8A9A] shrink-0">{items.filter(i => i.completed).length}/{items.length}</span>
                 </div>
                 {items.map(l => {
                   const hw = l.lesson.type === 'homework' ? homework.find(h => h.lessonId === l.lesson.id && h.studentId === user.id) : undefined;
                   const row = (
-                    <div className={`flex items-center gap-3 px-5 py-3 ${l.unlocked ? 'hover:bg-[#F5F4F2]' : 'opacity-50'}`}>
-                      {l.completed ? <CheckCircle2 className="w-4 h-4 text-[#7C6AF7]" /> : l.unlocked ? <Circle className="w-4 h-4 text-[#8A8A9A]" /> : <Lock className="w-4 h-4 text-[#8A8A9A]" />}
-                      <span className="flex-1 text-sm text-[#1A1A2E]">{l.lesson.title}</span>
-                      <span className="text-xs text-[#8A8A9A]">
+                    <div className={`flex items-center gap-3 px-4 sm:px-5 py-3 min-h-12 ${l.unlocked ? 'hover:bg-[#F5F4F2]' : 'opacity-50'}`}>
+                      {l.completed ? <CheckCircle2 className="w-4 h-4 shrink-0 text-[#7C6AF7]" /> : l.unlocked ? <Circle className="w-4 h-4 shrink-0 text-[#8A8A9A]" /> : <Lock className="w-4 h-4 shrink-0 text-[#8A8A9A]" />}
+                      <span className="flex-1 min-w-0 text-sm text-[#1A1A2E] break-words">{l.lesson.title}</span>
+                      <span className="text-xs text-[#8A8A9A] shrink-0 text-right">
                         {hw ? (hw.status === 'approved' ? 'Принято' : hw.status === 'returned' ? 'На доработку' : 'На проверке') : LESSON_TYPE_LABELS[l.lesson.type]}
                       </span>
                     </div>
@@ -85,7 +86,7 @@ export function StudentCourseOverview() {
                     ? <Link key={l.lesson.id} to={`/student/courses/${course.id}/lesson/${l.lesson.id}`} className="block">{row}</Link>
                     : <div key={l.lesson.id}>{row}</div>;
                 })}
-                {items.length === 0 && <p className="px-5 py-3 text-sm text-[#8A8A9A] flex items-center gap-2"><BookOpen className="w-4 h-4" />Уроки скоро появятся</p>}
+                {items.length === 0 && <p className="px-4 sm:px-5 py-3 text-sm text-[#8A8A9A] flex items-center gap-2"><BookOpen className="w-4 h-4" />Уроки скоро появятся</p>}
               </CardContent>
             </Card>
           );

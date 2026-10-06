@@ -1,3 +1,4 @@
+import { pluralize } from '../../lib/analytics';
 import { useMemo } from 'react';
 import { Card, CardContent } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
@@ -76,26 +77,26 @@ export function StudentProgress() {
   ];
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-[28px] font-bold text-[#1A1A2E]" style={{ fontFamily: 'var(--font-heading)' }}>Мой прогресс</h1>
+        <h1 className="text-[24px] sm:text-[28px] leading-tight font-bold text-[#1A1A2E]" style={{ fontFamily: 'var(--font-heading)' }}>Мой прогресс</h1>
         <p className="text-[13px] text-[#8A8A9A]" style={{ fontFamily: 'var(--font-body)' }}>Ваши достижения и статистика обучения</p>
       </div>
 
       {/* Level card */}
       <Card className="bg-gradient-to-br from-[#7C6AF7] to-[#9B8AF9] text-white border-0 mb-6 overflow-hidden relative">
-        <CardContent className="p-6 relative z-10">
+        <CardContent className="p-5 sm:p-6 relative z-10">
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div>
               <p className="text-[12px] opacity-80 mb-1" style={{ fontFamily: 'var(--font-body)' }}>Текущий уровень</p>
-              <p className="text-[48px] font-bold" style={{ fontFamily: 'var(--font-heading)' }}>
+              <p className="text-[40px] sm:text-[48px] leading-none font-bold" style={{ fontFamily: 'var(--font-heading)' }}>
                 <CountUp value={level} />
               </p>
               <p className="text-[12px] opacity-80 mt-1" style={{ fontFamily: 'var(--font-body)' }}>
-                {lessonsToNext} {lessonsToNext === 1 ? 'урок' : 'уроков'} до уровня {level + 1}
+                {pluralize(lessonsToNext, ['урок', 'урока', 'уроков'])} до уровня {level + 1}
               </p>
             </div>
-            <div className="flex-1 max-w-md">
+            <div className="flex-1 min-w-[180px] max-w-md">
               <div className="flex items-center justify-between mb-2 text-[12px]" style={{ fontFamily: 'var(--font-body)' }}>
                 <span>Прогресс уровня</span>
                 <span className="font-bold">{Math.round(xpProgress)}%</span>
@@ -115,16 +116,16 @@ export function StudentProgress() {
       </Card>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
         {stats.map((s, i) => (
           <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
             <Card className={`${s.color} border-0`}>
-              <CardContent className="p-5">
+              <CardContent className="p-4 sm:p-5">
                 <s.icon className={`w-5 h-5 ${s.text} mb-3`} strokeWidth={1.5} />
-                <p className={`text-[28px] font-bold ${s.text}`} style={{ fontFamily: 'var(--font-heading)' }}>
+                <p className={`text-[24px] sm:text-[28px] leading-tight font-bold ${s.text}`} style={{ fontFamily: 'var(--font-heading)' }}>
                   {typeof s.value === 'number' ? <CountUp value={s.value} /> : s.value}
                 </p>
-                <p className="text-[11px] text-[#1A1A2E]/60 mt-1" style={{ fontFamily: 'var(--font-body)' }}>{s.label}</p>
+                <p className="text-[12px] text-[#1A1A2E]/60 mt-1" style={{ fontFamily: 'var(--font-body)' }}>{s.label}</p>
               </CardContent>
             </Card>
           </motion.div>
@@ -143,17 +144,17 @@ export function StudentProgress() {
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: i * 0.05 }}
               >
-                <Card className={`${a.unlocked ? a.color : 'bg-white'} border-0 ${a.unlocked ? '' : 'opacity-50'}`}>
+                <Card className={`${a.unlocked ? a.color : 'bg-white'} border-0 ${a.unlocked ? '' : 'opacity-60'}`}>
                   <CardContent className="p-4 text-center">
                     {a.unlocked ? (
                       <a.icon className="w-8 h-8 text-[#1A1A2E] mx-auto mb-2" strokeWidth={1.5} />
                     ) : (
                       <Lock className="w-8 h-8 text-[#8A8A9A] mx-auto mb-2" strokeWidth={1.5} />
                     )}
-                    <p className="text-[12px] font-semibold text-[#1A1A2E] mb-1" style={{ fontFamily: 'var(--font-heading)' }}>
+                    <p className="text-[13px] font-semibold text-[#1A1A2E] mb-1" style={{ fontFamily: 'var(--font-heading)' }}>
                       {a.title}
                     </p>
-                    <p className="text-[10px] text-[#1A1A2E]/60" style={{ fontFamily: 'var(--font-body)' }}>
+                    <p className="text-[12px] leading-snug text-[#1A1A2E]/70" style={{ fontFamily: 'var(--font-body)' }}>
                       {a.description}
                     </p>
                   </CardContent>
@@ -186,13 +187,13 @@ export function StudentProgress() {
                     <Card className="border-0">
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between mb-2 gap-3">
-                          <h3 className="text-[14px] font-semibold text-[#1A1A2E] line-clamp-1" style={{ fontFamily: 'var(--font-heading)' }}>
+                          <h3 className="text-[14px] font-semibold text-[#1A1A2E] line-clamp-2 min-w-0" style={{ fontFamily: 'var(--font-heading)' }}>
                             {c.title}
                           </h3>
                           <Badge variant={pct >= 100 ? 'success' : 'secondary'}>{pct}%</Badge>
                         </div>
                         <Progress value={pct} className="h-1.5 mb-2" />
-                        <p className="text-[11px] text-[#8A8A9A]" style={{ fontFamily: 'var(--font-body)' }}>
+                        <p className="text-[12px] text-[#8A8A9A]" style={{ fontFamily: 'var(--font-body)' }}>
                           {completed} из {lessonCount} уроков пройдено
                         </p>
                       </CardContent>

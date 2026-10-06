@@ -65,7 +65,7 @@ export function AuthorLayout() {
         variant="ghost"
         size="sm"
         onClick={handleLogout}
-        className="w-full justify-start gap-2 text-white/50 hover:text-white hover:bg-white/10 h-8"
+        className="w-full justify-start gap-2 text-white/60 hover:text-white hover:bg-white/10 h-10 md:h-8"
       >
         <LogOut className="w-4 h-4" />
         <span className="text-xs">Выйти</span>
@@ -74,7 +74,7 @@ export function AuthorLayout() {
   );
 
   return (
-    <div className="flex flex-col md:flex-row h-screen bg-[#F5F4F2]">
+    <div className="flex flex-col md:flex-row h-dvh bg-[#F5F4F2]">
       <MobileNav navigation={nav} rootHref="/author" footer={userFooter} actions={<NotificationBell variant="dark" />} />
 
       <aside className="hidden md:flex w-[200px] bg-[#1A1A2E] flex-col">
@@ -112,7 +112,7 @@ export function AuthorLayout() {
         <div className="p-4 border-t border-white/10">{userFooter}</div>
       </aside>
 
-      <main className="flex-1 overflow-y-auto">
+      <main className="flex-1 min-w-0 overflow-y-auto">
         <motion.div
           key={location.pathname}
           initial={{ opacity: 0 }}

@@ -16,7 +16,7 @@ export function storageName(name: string): string {
 }
 
 export function FileUpload({
-  bucket, pathPrefix, accept, label = 'Загрузить файл', onUploaded, variant = 'outline',
+  bucket, pathPrefix, accept, label = 'Загрузить файл', onUploaded, variant = 'outline', className,
 }: {
   bucket: FileBucket;
   /** Префикс пути, первым сегментом обязан идти id курса */
@@ -24,6 +24,7 @@ export function FileUpload({
   accept?: string;
   label?: string;
   variant?: 'outline' | 'default' | 'ghost';
+  className?: string;
   onUploaded: (result: { path: string; name: string; size: number }) => void;
 }) {
   const { uploadFile } = useDataStore();
@@ -51,7 +52,7 @@ export function FileUpload({
   return (
     <>
       <input ref={input} type="file" accept={accept} className="hidden" onChange={e => onFile(e.target.files?.[0])} />
-      <Button type="button" variant={variant} size="sm" disabled={busy} onClick={() => input.current?.click()}>
+      <Button type="button" variant={variant} size="sm" className={className} disabled={busy} onClick={() => input.current?.click()}>
         {busy ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
         {busy ? 'Загрузка…' : label}
       </Button>

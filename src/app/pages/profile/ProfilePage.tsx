@@ -10,6 +10,7 @@ import { useDataStore } from '../../store/DataStore';
 import { Save, Trophy, BookOpen, Users, FileCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion } from 'motion/react';
+import { ChangePasswordCard } from '../../components/ChangePasswordCard';
 
 export function ProfilePage() {
   const { user, logout, updateProfile } = useAuth();
@@ -53,20 +54,20 @@ export function ProfilePage() {
       ];
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-[28px] font-bold text-[#1A1A2E]" style={{ fontFamily: 'var(--font-heading)' }}>Профиль</h1>
+    <div className="p-4 sm:p-6 max-w-4xl mx-auto">
+      <div className="mb-5 sm:mb-6">
+        <h1 className="text-[24px] sm:text-[28px] leading-tight font-bold text-[#1A1A2E] mb-1" style={{ fontFamily: 'var(--font-heading)' }}>Профиль</h1>
         <p className="text-[13px] text-[#8A8A9A]" style={{ fontFamily: 'var(--font-body)' }}>Управляйте своими данными</p>
       </div>
 
-      <div className={`grid grid-cols-2 ${stats.length === 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-2'} gap-4 mb-6`}>
+      <div className={`grid grid-cols-2 ${stats.length === 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-2'} gap-3 sm:gap-4 mb-6`}>
         {stats.map((s, i) => (
           <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
             <Card className={`${s.color} border-0`}>
-              <CardContent className="p-5">
-                <s.icon className={`w-5 h-5 ${s.text} mb-3`} strokeWidth={1.5} />
-                <p className={`text-[28px] font-bold ${s.text}`} style={{ fontFamily: 'var(--font-heading)' }}>{s.value}</p>
-                <p className="text-[11px] text-[#1A1A2E]/60 mt-1" style={{ fontFamily: 'var(--font-body)' }}>{s.label}</p>
+              <CardContent className="p-4 sm:p-5">
+                <s.icon className={`w-5 h-5 ${s.text} mb-2 sm:mb-3`} strokeWidth={1.5} />
+                <p className={`text-[24px] sm:text-[28px] leading-tight font-bold ${s.text}`} style={{ fontFamily: 'var(--font-heading)' }}>{s.value}</p>
+                <p className="text-[12px] leading-snug text-[#1A1A2E]/60 mt-1" style={{ fontFamily: 'var(--font-body)' }}>{s.label}</p>
               </CardContent>
             </Card>
           </motion.div>
@@ -74,14 +75,14 @@ export function ProfilePage() {
       </div>
 
       <Card className="border-0">
-        <CardContent className="p-6">
-          <div className="flex items-center gap-4 mb-6">
-            <Avatar className="w-20 h-20">
+        <CardContent className="p-4 sm:p-6">
+          <div className="flex items-center gap-4 mb-5 sm:mb-6">
+            <Avatar className="w-16 h-16 sm:w-20 sm:h-20 shrink-0">
               <AvatarImage src={avatar} />
               <AvatarFallback className="bg-[#7C6AF7] text-white text-2xl">{name?.charAt(0) || 'U'}</AvatarFallback>
             </Avatar>
-            <div>
-              <h3 className="text-[18px] font-semibold text-[#1A1A2E]" style={{ fontFamily: 'var(--font-heading)' }}>{name || 'Без имени'}</h3>
+            <div className="min-w-0">
+              <h3 className="text-[17px] sm:text-[18px] font-semibold text-[#1A1A2E] break-words" style={{ fontFamily: 'var(--font-heading)' }}>{name || 'Без имени'}</h3>
               <Badge variant="secondary" className="mt-1">
                 {user.role === 'author' ? 'Автор' : user.role === 'student' ? 'Ученик' : user.role === 'curator' ? 'Куратор' : user.role}
               </Badge>
@@ -91,27 +92,29 @@ export function ProfilePage() {
           <div className="space-y-4">
             <div>
               <Label htmlFor="name">Имя</Label>
-              <Input id="name" value={name} onChange={e => setName(e.target.value)} className="mt-1.5" />
+              <Input id="name" value={name} onChange={e => setName(e.target.value)} autoComplete="name" className="mt-1.5 h-11 sm:h-10 text-base sm:text-sm" />
             </div>
             <div>
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" value={user.email} disabled className="mt-1.5" />
+              <Input id="email" type="email" value={user.email} disabled className="mt-1.5 h-11 sm:h-10 text-base sm:text-sm" />
             </div>
             <div>
               <Label htmlFor="avatar">Аватар (URL)</Label>
-              <Input id="avatar" value={avatar} onChange={e => setAvatar(e.target.value)} placeholder="https://..." className="mt-1.5" />
+              <Input id="avatar" value={avatar} onChange={e => setAvatar(e.target.value)} placeholder="https://..." inputMode="url" className="mt-1.5 h-11 sm:h-10 text-base sm:text-sm" />
             </div>
-            <div className="flex justify-between gap-3 pt-2">
-              <Button variant="outline" onClick={logout} className="text-[#FF6B6B] border-[#FF6B6B]/30 hover:bg-[#FF6B6B]/10">
+            {/* На телефоне: «Сохранить» сверху на всю ширину, «Выйти» под ним */}
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-between gap-2 sm:gap-3 pt-2">
+              <Button variant="outline" onClick={logout} className="w-full sm:w-auto h-11 sm:h-10 text-[#FF6B6B] border-[#FF6B6B]/30 hover:bg-[#FF6B6B]/10">
                 Выйти из аккаунта
               </Button>
-              <Button onClick={handleSave} disabled={saving} className="transition-transform active:scale-[0.98]">
+              <Button onClick={handleSave} disabled={saving} className="w-full sm:w-auto h-11 sm:h-10 transition-transform active:scale-[0.98]">
                 <Save className="w-4 h-4 mr-2" />Сохранить
               </Button>
             </div>
           </div>
         </CardContent>
       </Card>
+      <ChangePasswordCard />
     </div>
   );
 }

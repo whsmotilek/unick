@@ -27,7 +27,7 @@ export function ProtectedRoute({ allowedRoles, requireApprovedAuthor, children }
     return <Navigate to={homeFor(user)} replace />;
   }
 
-  if (requireApprovedAuthor && user.role === 'author' && user.authorStatus !== 'approved') {
+  if (requireApprovedAuthor && user.role === 'author' && (user.authorStatus === 'pending' || user.authorStatus === 'rejected')) {
     return <AuthorPending />;
   }
 
