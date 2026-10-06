@@ -5,8 +5,10 @@ export interface QuizQuestion {
   id: string;
   text: string;
   options: { id: string; text: string }[];
-  /** id правильных вариантов; больше одного — вопрос с несколькими ответами */
+  /** id правильных вариантов. Есть только у сотрудников: при сохранении бэкенд вырезает их из урока */
   correct: string[];
+  /** Можно выбрать несколько вариантов (ставится редактором, если правильных больше одного) */
+  multiple?: boolean;
 }
 
 /** Содержимое урока в едином формате для всех типов. Старые поля (url/html/instructions) остаются совместимыми. */
@@ -57,4 +59,15 @@ export function gradeQuiz(questions: QuizQuestion[], answers: Record<string, str
   }
   const total = questions.length;
   return { correct, total, percent: total ? Math.round((correct / total) * 100) : 0 };
+}
+
+/** Ключ ответов теста для saveQuizKey: questionId -> optionId[] */
+export function quizAnswersKey(questions: QuizQuestion[]): Record<string, string[]> {
+  return Object.fromEntries(questions.map(q => [q.id, [...q.correct]]));
+}
+
+/** Возвращает в вопросы правильные ответы из сохранённого ключа (для редактора) */
+export function mergeQuizKey(questions: QuizQuestion[], answers: Record<string, string[]> | undefined): QuizQuestion[] {
+  if (!answers) return questions.map(q => ({ ...q, correct: q.correct ?? [] }));
+  return questions.map(q => ({ ...q, correct: answers[q.id] ?? q.correct ?? [] }));
 }

@@ -130,7 +130,7 @@ export function CourseAccessPanel({ course }: { course: Course }) {
               <p className="text-[13px] text-[#8A8A9A]">Можно добавить уже зарегистрированного пользователя по email.</p>
             </div>
             <div className="flex gap-2">
-              <Input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="email ученика" className="h-9 sm:w-56"
+              <Input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="email ученика" aria-label="Email ученика" className="h-9 sm:w-56"
                 onKeyDown={e => { if (e.key === 'Enter') handleEnroll(); }} />
               <Button variant="outline" size="sm" onClick={handleEnroll} disabled={busy}><UserPlus className="w-4 h-4 mr-1" />Добавить</Button>
             </div>

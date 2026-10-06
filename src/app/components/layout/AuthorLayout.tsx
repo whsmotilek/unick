@@ -14,6 +14,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Button } from '../ui/button';
 import { useAuth } from '../../context/AuthContext';
 import { MobileNav } from '../MobileNav';
+import { NotificationBell } from '../NotificationBell';
 import { DemoBanner } from '../DemoBanner';
 import { motion } from 'motion/react';
 import logoWhiteFull from '@/assets/logo/logo-full-white.png';
@@ -72,13 +73,14 @@ export function AuthorLayout() {
 
   return (
     <div className="flex flex-col md:flex-row h-screen bg-[#F5F4F2]">
-      <MobileNav navigation={navigation} rootHref="/author" footer={userFooter} />
+      <MobileNav navigation={navigation} rootHref="/author" footer={userFooter} actions={<NotificationBell variant="dark" />} />
 
       <aside className="hidden md:flex w-[200px] bg-[#1A1A2E] flex-col">
-        <div className="p-6">
+        <div className="p-6 pr-3 flex items-center justify-between gap-2">
           <Link to="/author" className="flex items-center gap-2">
             <img src={logoWhiteFull} alt="Unick" className="h-6" />
           </Link>
+          <NotificationBell variant="dark" side="right" align="start" />
         </div>
 
         <nav className="flex-1 px-4 space-y-1 overflow-y-auto">

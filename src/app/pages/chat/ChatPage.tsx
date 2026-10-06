@@ -9,6 +9,7 @@ import { useDataStore } from '../../store/DataStore';
 import { useAuth } from '../../context/AuthContext';
 import { EmptyState } from '../../components/EmptyState';
 import { motion, AnimatePresence } from 'motion/react';
+import { useSearchParams } from 'react-router';
 import { User } from '../../types';
 
 export function ChatPage() {
@@ -19,6 +20,15 @@ export function ChatPage() {
   const [newChatOpen, setNewChatOpen] = useState(false);
   const [searchUser, setSearchUser] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const withParam = searchParams.get('with');
+
+  // Диплинк ?with=<userId> (из уведомлений): открываем диалог и убираем параметр из адреса
+  useEffect(() => {
+    if (!withParam) return;
+    if (withParam !== user?.id) setActiveUserId(withParam);
+    setSearchParams(p => { p.delete('with'); return p; }, { replace: true });
+  }, [withParam, user?.id, setSearchParams]);
 
   const allUsers = users;
 

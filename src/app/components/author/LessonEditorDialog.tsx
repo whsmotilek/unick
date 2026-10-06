@@ -11,7 +11,8 @@ import { FileUpload } from '../lesson/FileUpload';
 import { FileList } from '../lesson/FileList';
 import { VideoPlayer } from '../lesson/VideoPlayer';
 import { parseVideoUrl } from '../../lib/video';
-import { lessonData, LESSON_TYPE_LABELS, type LessonData, type QuizQuestion } from '../../lib/lessonContent';
+import { lessonData, mergeQuizKey, quizAnswersKey, LESSON_TYPE_LABELS, type LessonData, type QuizQuestion } from '../../lib/lessonContent';
+import { useDataStore } from '../../store/DataStore';
 import type { AttachedFile, Lesson } from '../../types';
 
 type EditableType = 'video' | 'text' | 'homework' | 'quiz' | 'file';
@@ -21,6 +22,8 @@ export interface LessonDraft {
   title: string;
   type: Lesson['type'];
   data: LessonData;
+  /** Для теста: ключ ответов, который нужно сохранить через saveQuizKey */
+  quizKey?: { answers: Record<string, string[]>; passPercent: number };
 }
 
 const newQuestion = (): QuizQuestion => {
@@ -94,12 +97,22 @@ export function LessonEditorDialog({
   const [title, setTitle] = useState('');
   const [type, setType] = useState<Lesson['type']>('video');
   const [data, setData] = useState<LessonData>({});
+  const { quizKeys } = useDataStore();
 
   useEffect(() => {
     if (!open) return;
     setTitle(initial?.title ?? '');
     setType(initial?.type ?? 'video');
-    setData(initial ? lessonData(initial) : {});
+    if (!initial) { setData({}); return; }
+    const d = lessonData(initial);
+    if (initial.type === 'quiz') {
+      // Правильные ответы хранятся отдельно (quiz_keys) — возвращаем их в вопросы
+      const key = quizKeys.find(k => k.lessonId === initial.id);
+      d.questions = mergeQuizKey(d.questions ?? [], key?.answers);
+      if (key) d.passPercent = key.passPercent;
+    }
+    setData(d);
+    // quizKeys намеренно не в зависимостях: не сбрасываем черновик при обновлении стора
   }, [open, initial]);
 
   const patch = (p: Partial<LessonData>) => setData(d => ({ ...d, ...p }));
@@ -119,6 +132,12 @@ export function LessonEditorDialog({
       if (bad >= 0) { toast.error(`Вопрос ${bad + 1}: заполните текст, все варианты и отметьте правильный ответ`); return; }
     }
     const { instructions: _legacy, ...clean } = data;
+    if (type === 'quiz') {
+      const questions = (clean.questions ?? []).map(q => ({ ...q, multiple: q.correct.length > 1 }));
+      const passPercent = clean.passPercent ?? 70;
+      onSave({ title: title.trim(), type, data: { ...clean, questions, passPercent }, quizKey: { answers: quizAnswersKey(questions), passPercent } });
+      return;
+    }
     onSave({ title: title.trim(), type, data: clean });
   };
 
@@ -137,9 +156,9 @@ export function LessonEditorDialog({
               <Input id="lesson-title" value={title} onChange={e => setTitle(e.target.value)} placeholder="Например: Как выбрать кисти" autoFocus className="mt-1.5" />
             </div>
             <div>
-              <Label>Тип урока</Label>
+              <Label htmlFor="lesson-type">Тип урока</Label>
               <Select value={type} onValueChange={(v: Lesson['type']) => setType(v)}>
-                <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
+                <SelectTrigger id="lesson-type" className="mt-1.5"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {TYPES.map(t => <SelectItem key={t} value={t}>{LESSON_TYPE_LABELS[t]}</SelectItem>)}
                 </SelectContent>

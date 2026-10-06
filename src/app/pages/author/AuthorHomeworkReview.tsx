@@ -17,7 +17,7 @@ import { Homework } from '../../types';
 
 export function AuthorHomeworkReview() {
   const { user } = useAuth();
-  const { courses, homework, reviewHomework } = useDataStore();
+  const { courses, homework, reviewHomework, users } = useDataStore();
   const [filter, setFilter] = useState<'all' | 'pending' | 'reviewed'>('pending');
   const [selectedHw, setSelectedHw] = useState<Homework | null>(null);
   const [feedback, setFeedback] = useState('');
@@ -26,18 +26,11 @@ export function AuthorHomeworkReview() {
     return courses.filter(c => c.schoolId === user?.schoolId).map(c => c.id);
   }, [courses, user]);
 
-  // Get all users for displaying student info
   const userMap = useMemo(() => {
-    try {
-      const stored = localStorage.getItem('unick_users');
-      const users = stored ? JSON.parse(stored) : [];
-      const map: Record<string, any> = {};
-      for (const u of users) map[u.id] = u;
-      return map;
-    } catch {
-      return {};
-    }
-  }, [homework]);
+    const map: Record<string, (typeof users)[number]> = {};
+    for (const u of users) map[u.id] = u;
+    return map;
+  }, [users]);
 
   const myCoursesMap = useMemo(() => {
     const m: Record<string, string> = {};
@@ -182,10 +175,11 @@ export function AuthorHomeworkReview() {
                 )}
               </div>
               <div>
-                <label className="text-[12px] font-medium text-[#1A1A2E] mb-1.5 block" style={{ fontFamily: 'var(--font-body)' }}>
+                <label htmlFor="hw-feedback" className="text-[12px] font-medium text-[#1A1A2E] mb-1.5 block" style={{ fontFamily: 'var(--font-body)' }}>
                   Обратная связь
                 </label>
                 <Textarea
+                  id="hw-feedback"
                   rows={4}
                   placeholder="Напишите комментарий или замечания..."
                   value={feedback}

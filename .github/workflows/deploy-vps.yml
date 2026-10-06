@@ -1,0 +1,50 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-vps
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: ${{ vars.APP_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - name: Сборка (сайт обслуживается с корня домена)
+        run: npm run build
+        env:
+          VITE_BASE: /
+          VITE_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          VITE_WAITLIST_ENDPOINT: ${{ secrets.WAITLIST_ENDPOINT }}
+          VITE_LEGAL_OPERATOR: ${{ vars.LEGAL_OPERATOR }}
+          VITE_LEGAL_REQUISITES: ${{ vars.LEGAL_REQUISITES }}
+          VITE_CONTACT_EMAIL: ${{ vars.CONTACT_EMAIL }}
+      - name: Выкладка на сервер
+        env:
+          SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+          HOST: ${{ secrets.VPS_HOST }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key && chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          # Сначала ассеты (новые имена с хешами), потом index.html — пользователи не ловят битую версию
+          rsync -az -e "ssh -i ~/.ssh/deploy_key" dist/assets/ deploy@$HOST:/opt/unick/web/assets/
+          rsync -az --delete --delay-updates -e "ssh -i ~/.ssh/deploy_key" dist/ deploy@$HOST:/opt/unick/web/
+      - name: Проверка
+        run: curl -fsS "${{ vars.APP_URL }}/" | grep -q '<div id="root">'

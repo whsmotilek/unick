@@ -36,6 +36,9 @@ import { ChatPage } from './pages/chat/ChatPage';
 // Curator
 import { CuratorDashboard } from './pages/curator/CuratorDashboard';
 
+// Admin
+import { AdminDashboard } from './pages/admin/AdminDashboard';
+
 // Heavy/rare — lazy load
 const CourseUniverse = lazy(() => import('./pages/author/CourseUniverse').then(m => ({ default: m.CourseUniverse })));
 const Calendar = lazy(() => import('./pages/Calendar').then(m => ({ default: m.Calendar })));
@@ -131,7 +134,7 @@ export const router = createBrowserRouter([
   // Admin
   {
     path: '/admin',
-    element: <ProtectedRoute allowedRoles={['admin']}><Placeholder title="Личный кабинет администратора" /></ProtectedRoute>,
+    element: <ProtectedRoute allowedRoles={['admin']}><AdminDashboard /></ProtectedRoute>,
   },
 
   // 404

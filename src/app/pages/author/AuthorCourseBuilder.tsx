@@ -99,9 +99,9 @@ function CourseSettings({ course, onSaved }: { course: Course | undefined; onSav
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <Label>Доступ к курсу</Label>
+            <Label htmlFor="course-access">Доступ к курсу</Label>
             <Select value={accessType} onValueChange={(v: CourseAccessType) => setAccessType(v)}>
-              <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
+              <SelectTrigger id="course-access" className="mt-1.5"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {(Object.keys(ACCESS_LABELS) as CourseAccessType[]).map(k => <SelectItem key={k} value={k}>{ACCESS_LABELS[k].title}</SelectItem>)}
               </SelectContent>
@@ -121,13 +121,13 @@ function CourseSettings({ course, onSaved }: { course: Course | undefined; onSav
             <p className="text-sm font-medium text-[#1A1A2E]">Уроки по порядку</p>
             <p className="text-xs text-[#8A8A9A]">Следующий урок открывается после завершения предыдущего; домашнее задание — после того как его примут.</p>
           </div>
-          <Switch checked={sequential} onCheckedChange={setSequential} />
+          <Switch aria-label="Уроки по порядку" checked={sequential} onCheckedChange={setSequential} />
         </div>
 
         <div>
-          <Label>Статус</Label>
+          <Label htmlFor="course-status">Статус</Label>
           <Select value={status} onValueChange={(v: 'draft' | 'published') => setStatus(v)}>
-            <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
+            <SelectTrigger id="course-status" className="mt-1.5"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="draft">Черновик — виден только вам</SelectItem>
               <SelectItem value="published">Опубликован — ученики могут вступить</SelectItem>
@@ -151,7 +151,7 @@ export function AuthorCourseBuilder() {
   const { user } = useAuth();
   const {
     loading, getCourse, createCourse, updateCourse, deleteCourse, addModule, updateModule, deleteModule, moveModule,
-    addLesson, updateLesson, deleteLesson, moveLesson, enrollmentRecords,
+    addLesson, updateLesson, deleteLesson, moveLesson, enrollmentRecords, saveQuizKey,
   } = useDataStore();
 
   const course = !isNew ? getCourse(id!) : undefined;
@@ -218,12 +218,18 @@ export function AuthorCourseBuilder() {
   const saveLesson = (draft: LessonDraft) => {
     if (!course || !lessonModuleId) return;
     const content = { type: draft.type, data: draft.data };
+    let lessonId: string;
     if (editingLesson) {
       updateLesson(course.id, lessonModuleId, editingLesson.id, { title: draft.title, type: draft.type, content });
+      lessonId = editingLesson.id;
       toast.success('Урок сохранён');
     } else {
-      addLesson(course.id, lessonModuleId, { title: draft.title, type: draft.type, content });
+      lessonId = addLesson(course.id, lessonModuleId, { title: draft.title, type: draft.type, content }).id;
       toast.success('Урок добавлен');
+    }
+    // Правильные ответы теста живут отдельно от урока: ученикам они не отдаются
+    if (draft.type === 'quiz' && draft.quizKey) {
+      saveQuizKey({ lessonId, courseId: course.id, ...draft.quizKey });
     }
     setLessonDialogOpen(false);
   };
@@ -241,7 +247,7 @@ export function AuthorCourseBuilder() {
         <Card className="border-0">
           <CardContent className="p-12 text-center">
             <h2 className="text-[24px] font-bold mb-3" style={{ fontFamily: 'var(--font-heading)' }}>Курс не найден</h2>
-            <Link to="/author/courses"><Button>← К списку курсов</Button></Link>
+            <Button asChild><Link to="/author/courses">← К списку курсов</Link></Button>
           </CardContent>
         </Card>
       </div>
@@ -255,9 +261,7 @@ export function AuthorCourseBuilder() {
     <div className="p-4 sm:p-6 max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <div className="flex items-center gap-3 min-w-0">
-          <Link to="/author/courses">
-            <Button variant="ghost" size="icon" aria-label="Назад"><ArrowLeft className="w-4 h-4" /></Button>
-          </Link>
+          <Button asChild variant="ghost" size="icon" aria-label="Назад"><Link to="/author/courses"><ArrowLeft className="w-4 h-4" /></Link></Button>
           <div className="min-w-0">
             <h1 className="text-[22px] sm:text-[24px] font-bold text-[#1A1A2E] truncate" style={{ fontFamily: 'var(--font-heading)' }}>
               {course?.title || 'Новый курс'}
@@ -273,9 +277,7 @@ export function AuthorCourseBuilder() {
               {course.status === 'published' ? 'Опубликован' : 'Черновик'}
             </Badge>
             {firstLesson && (
-              <Link to={`/author/courses/${course.id}/preview/${firstLesson.id}`}>
-                <Button variant="outline" size="sm"><Eye className="w-4 h-4 mr-1" />Как видит ученик</Button>
-              </Link>
+              <Button asChild variant="outline" size="sm"><Link to={`/author/courses/${course.id}/preview/${firstLesson.id}`}><Eye className="w-4 h-4 mr-1" />Как видит ученик</Link></Button>
             )}
             <Button variant="outline" size="sm" onClick={() => setDeleteCourseOpen(true)} aria-label="Удалить курс">
               <Trash2 className="w-4 h-4" />

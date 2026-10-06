@@ -55,7 +55,14 @@ export function RichTextEditor({ value, onChange, placeholder }: { value: string
     ],
     content: sanitizeHtml(value || ''),
     onUpdate: ({ editor: e }) => onChange(e.isEmpty ? '' : e.getHTML()),
-    editorProps: { attributes: { class: 'lesson-content min-h-[200px] max-h-[50vh] overflow-y-auto px-4 py-3 focus:outline-none' } },
+    editorProps: {
+      attributes: {
+        class: 'lesson-content min-h-[200px] max-h-[50vh] overflow-y-auto px-4 py-3 focus:outline-none',
+        role: 'textbox',
+        'aria-multiline': 'true',
+        'aria-label': placeholder ?? 'Текст урока',
+      },
+    },
   });
 
   // Внешняя смена значения (открыли другой урок)

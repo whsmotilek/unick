@@ -74,8 +74,8 @@ export function JoinCourse() {
                 </p>
               ) : !user ? (
                 <div className="space-y-2">
-                  <Link to={`/register?next=${next}`}><Button className="w-full h-11">Зарегистрироваться и начать</Button></Link>
-                  <Link to={`/login?next=${next}`}><Button variant="outline" className="w-full h-11">У меня уже есть аккаунт</Button></Link>
+                  <Button asChild className="w-full h-11"><Link to={`/register?next=${next}`}>Зарегистрироваться и начать</Link></Button>
+                  <Button asChild variant="outline" className="w-full h-11"><Link to={`/login?next=${next}`}>У меня уже есть аккаунт</Link></Button>
                 </div>
               ) : user.role !== 'student' ? (
                 <div className="space-y-3">

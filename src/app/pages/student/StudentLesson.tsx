@@ -107,7 +107,7 @@ export function StudentLesson() {
           <Lock className="w-10 h-10 mx-auto mb-3 text-[#8A8A9A]" strokeWidth={1.5} />
           <p className="font-semibold text-[#1A1A2E] mb-1">Урок пока закрыт</p>
           <p className="text-sm text-[#8A8A9A] mb-4">Он откроется, когда вы пройдёте предыдущие уроки. Домашние задания засчитываются после проверки автором.</p>
-          {prev && <Link to={`${base}/${prev.lesson.id}`}><Button variant="outline"><ArrowLeft className="w-4 h-4 mr-2" />К предыдущему уроку</Button></Link>}
+          {prev && <Button asChild variant="outline"><Link to={`${base}/${prev.lesson.id}`}><ArrowLeft className="w-4 h-4 mr-2" />К предыдущему уроку</Link></Button>}
         </div>
       );
     }
@@ -117,8 +117,8 @@ export function StudentLesson() {
 
         {lesson.type === 'quiz' ? (
           <div className="bg-white rounded-2xl p-6 sm:p-8">
-            <QuizPlayer questions={data.questions ?? []} passPercent={data.passPercent ?? 70} completed={completed}
-              onPassed={() => { if (!completed && !preview && user) markLessonComplete(user.id, course.id, lesson.id); }} />
+            {/* Проверка на сервере; пройденный тест бэкенд сам отмечает завершённым */}
+            <QuizPlayer key={lesson.id} lessonId={lesson.id} questions={data.questions ?? []} passPercent={data.passPercent ?? 70} completed={completed} />
           </div>
         ) : data.html ? (
           <div className="bg-white rounded-2xl p-6 sm:p-8">
@@ -206,9 +206,7 @@ export function StudentLesson() {
             <div className="flex items-center justify-between flex-wrap gap-3 mb-10">
               <div>
                 {prev && (
-                  <Link to={`${base}/${prev.lesson.id}`}>
-                    <Button variant="outline"><ArrowLeft className="w-4 h-4 mr-2" />Предыдущий</Button>
-                  </Link>
+                  <Button asChild variant="outline"><Link to={`${base}/${prev.lesson.id}`}><ArrowLeft className="w-4 h-4 mr-2" />Предыдущий</Link></Button>
                 )}
               </div>
               <div className="flex gap-2">
@@ -218,9 +216,7 @@ export function StudentLesson() {
                   </Button>
                 )}
                 {next && (preview || next.unlocked) && (
-                  <Link to={`${base}/${next.lesson.id}`}>
-                    <Button variant={canMarkComplete ? 'outline' : 'default'}>Следующий<ArrowRight className="w-4 h-4 ml-2" /></Button>
-                  </Link>
+                  <Button asChild variant={canMarkComplete ? 'outline' : 'default'}><Link to={`${base}/${next.lesson.id}`}>Следующий<ArrowRight className="w-4 h-4 ml-2" /></Link></Button>
                 )}
               </div>
             </div>

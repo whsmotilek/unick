@@ -48,14 +48,12 @@ export function StudentCourseOverview() {
           <Progress value={pct} className="h-2 mb-5" />
           <div className="flex flex-wrap gap-2">
             {nextUp ? (
-              <Link to={`/student/courses/${course.id}/lesson/${nextUp.lesson.id}`}>
-                <Button>{doneCount === 0 ? 'Начать обучение' : pct === 100 ? 'Повторить курс' : 'Продолжить'}<ArrowRight className="w-4 h-4 ml-2" /></Button>
-              </Link>
+              <Button asChild><Link to={`/student/courses/${course.id}/lesson/${nextUp.lesson.id}`}>{doneCount === 0 ? 'Начать обучение' : pct === 100 ? 'Повторить курс' : 'Продолжить'}<ArrowRight className="w-4 h-4 ml-2" /></Link></Button>
             ) : (
               <p className="text-sm text-[#8A8A9A]">Автор ещё не добавил уроки.</p>
             )}
             {author && (
-              <Link to="/student/chat"><Button variant="outline"><MessageSquare className="w-4 h-4 mr-2" />Написать автору</Button></Link>
+              <Button asChild variant="outline"><Link to="/student/chat"><MessageSquare className="w-4 h-4 mr-2" />Написать автору</Link></Button>
             )}
           </div>
         </CardContent>

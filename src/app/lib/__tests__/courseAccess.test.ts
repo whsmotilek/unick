@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { flattenCourse, nextLessonToStudy } from '../courseAccess';
-import { gradeQuiz } from '../lessonContent';
+import { gradeQuiz, mergeQuizKey, quizAnswersKey } from '../lessonContent';
 import type { Course } from '../../types';
 
 const lesson = (id: string, moduleId: string, order: number) => ({
@@ -46,5 +46,17 @@ describe('gradeQuiz', () => {
     expect(gradeQuiz(qs, { q1: ['a'], q2: ['c', 'b'] })).toEqual({ correct: 2, total: 2, percent: 100 });
     expect(gradeQuiz(qs, { q1: ['a'], q2: ['b'] })).toEqual({ correct: 1, total: 2, percent: 50 });
     expect(gradeQuiz(qs, {})).toEqual({ correct: 0, total: 2, percent: 0 });
+  });
+});
+
+describe('quiz key helpers', () => {
+  const qs = [
+    { id: 'q1', text: '', options: [], correct: [] as string[] },
+    { id: 'q2', text: '', options: [], correct: ['x'] },
+  ];
+  it('собирает ключ и возвращает его в вопросы', () => {
+    expect(quizAnswersKey([{ ...qs[0], correct: ['a'] }])).toEqual({ q1: ['a'] });
+    expect(mergeQuizKey(qs, { q1: ['a'] }).map(q => q.correct)).toEqual([['a'], ['x']]);
+    expect(mergeQuizKey(qs, undefined).map(q => q.correct)).toEqual([[], ['x']]);
   });
 });

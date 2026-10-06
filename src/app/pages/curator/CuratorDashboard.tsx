@@ -15,6 +15,7 @@ import { motion } from 'motion/react';
 import { toast } from 'sonner';
 import { sanitizeHtml } from '../../lib/sanitize';
 import { FileList } from '../../components/lesson/FileList';
+import { NotificationBell } from '../../components/NotificationBell';
 import { useNavigate } from 'react-router';
 import { Homework, User } from '../../types';
 import logoWhiteFull from '@/assets/logo/logo-full-white.png';
@@ -115,6 +116,7 @@ export function CuratorDashboard() {
             <Badge variant="secondary" className="bg-white/15 text-white border-0">Куратор</Badge>
           </div>
           <div className="flex items-center gap-3">
+            <NotificationBell variant="dark" />
             <Avatar className="w-8 h-8">
               <AvatarImage src={user?.avatar} />
               <AvatarFallback className="bg-[#7C6AF7] text-white text-xs">{user?.name?.charAt(0)}</AvatarFallback>

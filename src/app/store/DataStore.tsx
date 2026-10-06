@@ -154,6 +154,13 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
     return () => { window.removeEventListener('focus', onFocus); window.clearInterval(timer); };
   }, [user, refresh]);
 
+  // Последнее сохранение каждого урока: ключ теста ссылается на урок и должен уйти после него
+  const lessonSaves = useRef(new Map<string, Promise<unknown>>());
+  const trackLessonSave = (lessonId: string, op: Promise<unknown>) => {
+    lessonSaves.current.set(lessonId, op.catch(() => undefined));
+    return op;
+  };
+
   /** Отправить изменение на бэкенд; при ошибке — сообщить и откатиться к серверному состоянию. */
   const persist = useCallback((op: Promise<unknown>) => {
     op.catch(e => {
@@ -308,7 +315,7 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
       isLocked: false,
     };
     withLessons(courseId, moduleId, ls => [...ls, lesson]);
-    persist(backend.saveLesson(lesson, courseId));
+    persist(trackLessonSave(lesson.id, backend.saveLesson(lesson, courseId)));
     return lesson;
   };
 
@@ -317,7 +324,7 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
     if (!l) return;
     const next = { ...l, ...patch };
     withLessons(courseId, moduleId, ls => ls.map(x => (x.id === lessonId ? next : x)));
-    persist(backend.saveLesson(next, courseId));
+    persist(trackLessonSave(lessonId, backend.saveLesson(next, courseId)));
   };
 
   const deleteLesson = (courseId: string, moduleId: string, lessonId: string) => {
@@ -429,7 +436,8 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
 
   const saveQuizKey = (key: QuizKey) => {
     setData(d => ({ ...d, quizKeys: [...d.quizKeys.filter(k => k.lessonId !== key.lessonId), key] }));
-    persist(backend.saveQuizKey(key));
+    const pending = lessonSaves.current.get(key.lessonId) ?? Promise.resolve();
+    persist(pending.then(() => backend.saveQuizKey(key)));
   };
 
   const submitQuiz = async (lessonId: string, answers: Record<string, string[]>) => {
@@ -437,7 +445,9 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
     const u = userRef.current;
     if (result.passed && u) {
       const lesson = data.courses.flatMap(c => c.modules.flatMap(m => m.lessons.map(l => ({ l, courseId: c.id })))).find(x => x.l.id === lessonId);
-      if (lesson && !data.progress.some(p => p.userId === u.id && p.lessonId === lessonId)) {
+      // Сотрудник в предпросмотре не записан на курс — сервер прохождение не сохраняет, и мы тоже
+      const enrolled = lesson && data.enrollments.some(e => e.userId === u.id && e.courseId === lesson.courseId && e.status !== 'revoked');
+      if (lesson && enrolled && !data.progress.some(p => p.userId === u.id && p.lessonId === lessonId)) {
         setData(d => ({ ...d, progress: [...d.progress, { userId: u.id, courseId: lesson.courseId, lessonId, completedAt: nowIso() }] }));
       }
     }
