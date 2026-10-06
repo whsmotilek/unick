@@ -15,6 +15,38 @@ insert into auth.users (id, email, raw_user_meta_data) values
 select pg_temp.check((select role from profiles where email='st2@x.ru') = 'student', 'роль admin из метаданных не принимается');
 select pg_temp.check((select school_id from profiles where email='author@x.ru') is not null, 'у автора создаётся школа');
 
+-- ===== Модерация авторов =====
+insert into auth.users (id, email, raw_user_meta_data) values
+ ('00000000-0000-0000-0000-0000000000ad', 'admin@x.ru', '{"name":"Админ","role":"student"}');
+update profiles set role = 'admin' where email = 'admin@x.ru';
+insert into auth.users (id, email, raw_user_meta_data) values
+ ('00000000-0000-0000-0000-00000000000e', 'newauthor@x.ru', '{"name":"Новый автор","role":"author"}');
+select pg_temp.check((select author_status from profiles where email='newauthor@x.ru') = 'pending', 'новый автор ждёт одобрения');
+select pg_temp.check((select count(*) from notifications where type='author_pending' and user_id='00000000-0000-0000-0000-0000000000ad') = 1, 'админ получил уведомление о заявке');
+-- авторы a и b для остальных тестов одобрены сразу
+update profiles set author_status = 'approved' where email in ('author@x.ru', 'author2@x.ru');
+
+set role authenticated;
+select pg_temp.login('00000000-0000-0000-0000-00000000000e');
+do $$ begin
+  insert into courses (school_id, title) values (my_school_id(), 'До одобрения');
+  raise exception 'FAIL: неодобренный автор создал курс';
+exception when insufficient_privilege then raise notice 'ok  неодобренный автор не может создать курс'; end $$;
+update profiles set author_status = 'approved' where id = auth.uid();
+select pg_temp.check((select author_status from profiles where id = auth.uid()) = 'pending', 'автор не может сам себя одобрить');
+do $$ begin perform set_author_status(auth.uid(), 'approved'); raise exception 'FAIL: автор вызвал set_author_status';
+exception when raise_exception then if sqlerrm like 'FAIL%' then raise; end if; raise notice 'ok  одобрять может только админ'; end $$;
+
+select pg_temp.login('00000000-0000-0000-0000-0000000000ad');
+select set_author_status('00000000-0000-0000-0000-00000000000e', 'approved');
+select pg_temp.login('00000000-0000-0000-0000-00000000000e');
+insert into courses (school_id, title) values (my_school_id(), 'После одобрения');
+select pg_temp.check((select count(*) from courses where title = 'После одобрения') = 1, 'после одобрения автор создаёт курс');
+select pg_temp.check((select count(*) from notifications where type = 'author_status') = 1, 'автору пришло уведомление об одобрении');
+delete from courses where title = 'После одобрения';
+select pg_temp.login(null);
+reset role;
+
 set role authenticated;
 
 -- Автор создаёт курс, модуль, урок, инвайт

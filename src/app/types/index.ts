@@ -9,6 +9,8 @@ export interface User {
   role: UserRole;
   avatar?: string;
   schoolId?: string;
+  /** Модерация автора: курсы можно создавать только после одобрения */
+  authorStatus?: 'pending' | 'approved' | 'rejected';
 }
 
 export interface School {

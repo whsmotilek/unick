@@ -277,6 +277,10 @@ export function createLocalBackend(currentUser: () => User | null): Backend {
       }
       return { ...r, passed, passPercent: key.passPercent, wrong, key: passed ? key.answers : null };
     },
+    async setAuthorStatus(userId, status) {
+      if (currentUser()?.role !== 'admin') throw new Error('Недостаточно прав');
+      saveDemoUsers(getDemoUsers().map(u => (u.id === userId ? { ...u, authorStatus: status } : u)));
+    },
     async markNotificationsRead(ids) {
       const set = new Set(ids);
       commit({ ...db, notifications: db.notifications.map(n => (set.has(n.id) ? { ...n, read: true } : n)) });

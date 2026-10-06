@@ -49,6 +49,7 @@ const toNotification = (r: Row): AppNotification => ({
 });
 export const toUser = (r: Row): User => ({
   id: r.id, name: r.name, email: r.email, role: r.role, avatar: r.avatar ?? undefined, schoolId: r.school_id ?? undefined,
+  authorStatus: r.author_status ?? undefined,
 });
 
 function check<T>(res: { data: T | null; error: { message: string } | null }): T {
@@ -150,6 +151,9 @@ export function createSupabaseBackend(sb: SupabaseClient): Backend {
     },
     async submitQuiz(lessonId, answers) {
       return check(await sb.rpc('submit_quiz', { p_lesson: lessonId, p_answers: answers })) as QuizResult;
+    },
+    async setAuthorStatus(userId, status) {
+      check(await sb.rpc('set_author_status', { p_user: userId, p_status: status }));
     },
     async markNotificationsRead(ids) {
       if (!ids.length) return;

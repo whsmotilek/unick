@@ -74,7 +74,7 @@ export function Register() {
     setIsLoading(false);
     if (!result.success) { toast.error(result.error || 'Ошибка регистрации'); return; }
     if (result.needsConfirmation) { setConfirmEmail(email.trim()); return; }
-    toast.success(role === 'author' ? 'Аккаунт автора создан' : 'Аккаунт создан');
+    toast.success(role === 'author' ? 'Заявка автора отправлена' : 'Аккаунт создан');
   };
 
   if (confirmEmail) {

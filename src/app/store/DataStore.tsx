@@ -83,6 +83,9 @@ interface DataStoreContextType {
   // Уведомления
   markNotificationsRead(ids: string[]): void;
 
+  // Администратор
+  setAuthorStatus(userId: string, status: 'pending' | 'approved' | 'rejected'): void;
+
   // Домашние задания
   getHomeworkForStudent(userId: string): Homework[];
   getHomeworkForCourse(courseId: string): Homework[];
@@ -463,6 +466,13 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
     persist(backend.markNotificationsRead(unread));
   };
 
+  // ===== Администратор =====
+
+  const setAuthorStatus = (userId: string, status: 'pending' | 'approved' | 'rejected') => {
+    setData(d => ({ ...d, users: d.users.map(u => (u.id === userId ? { ...u, authorStatus: status } : u)) }));
+    persist(backend.setAuthorStatus(userId, status));
+  };
+
   // ===== Домашние задания =====
 
   const getHomeworkForStudent = useCallback((userId: string) => data.homework.filter(h => h.studentId === userId), [data.homework]);
@@ -547,7 +557,7 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
       courses: data.courses, users: data.users, getUser,
       enrollmentRecords: data.enrollments, invites: data.invites,
       quizKeys: data.quizKeys, notifications: data.notifications, progressRows: data.progress,
-      saveQuizKey, submitQuiz, markNotificationsRead,
+      saveQuizKey, submitQuiz, markNotificationsRead, setAuthorStatus,
       enrollments, progress, homework: data.homework, chats,
       createCourse, updateCourse, deleteCourse, getCourse,
       addModule, updateModule, deleteModule, moveModule,
