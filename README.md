@@ -2,7 +2,8 @@
 
 Платформа, где автор создаёт курс (видео, тексты, тесты, домашние задания), приглашает учеников по ссылке и ведёт обучение.
 
-- Сайт: https://whsmotilek.github.io/unick/
+- Сайт: https://unick.online
+- Сервер и деплой: [deploy/README.md](deploy/README.md)
 - План и статус: [docs/ROADMAP.md](docs/ROADMAP.md)
 - Подключение бэкенда: [docs/SETUP.md](docs/SETUP.md)
 
