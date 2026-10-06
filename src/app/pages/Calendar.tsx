@@ -167,9 +167,9 @@ export function Calendar() {
   const goToday = () => setCurrentDate(new Date());
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-[28px] font-bold text-[#1A1A2E]" style={{ fontFamily: 'var(--font-heading)' }}>Календарь</h1>
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto">
+      <div className="mb-5 sm:mb-6">
+        <h1 className="text-[24px] sm:text-[28px] leading-tight font-bold text-[#1A1A2E] mb-1" style={{ fontFamily: 'var(--font-heading)' }}>Календарь</h1>
         <p className="text-[13px] text-[#8A8A9A]" style={{ fontFamily: 'var(--font-body)' }}>Дедлайны и события ваших курсов</p>
       </div>
 
@@ -177,33 +177,33 @@ export function Calendar() {
         {/* Calendar */}
         <div className="lg:col-span-2">
           <Card className="border-0">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-[20px] font-bold text-[#1A1A2E]" style={{ fontFamily: 'var(--font-heading)' }}>
+            <CardContent className="p-3 sm:p-6">
+              <div className="flex items-center justify-between gap-2 mb-3 sm:mb-6 pl-1 sm:pl-0">
+                <h2 className="text-[18px] sm:text-[20px] font-bold text-[#1A1A2E] whitespace-nowrap" style={{ fontFamily: 'var(--font-heading)' }} aria-live="polite">
                   {monthNames[month]} {year}
                 </h2>
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm" onClick={goToday}>Сегодня</Button>
-                  <Button variant="ghost" size="icon" onClick={goPrev}>
+                <div className="flex items-center gap-0.5 sm:gap-2 shrink-0">
+                  <Button variant="outline" size="sm" onClick={goToday} className="h-9 sm:h-8 px-3">Сегодня</Button>
+                  <Button variant="ghost" size="icon" onClick={goPrev} aria-label="Предыдущий месяц">
                     <ChevronLeft className="w-4 h-4" />
                   </Button>
-                  <Button variant="ghost" size="icon" onClick={goNext}>
+                  <Button variant="ghost" size="icon" onClick={goNext} aria-label="Следующий месяц">
                     <ChevronRight className="w-4 h-4" />
                   </Button>
                 </div>
               </div>
 
               {/* Week days */}
-              <div className="grid grid-cols-7 gap-1 mb-2">
+              <div className="grid grid-cols-7 gap-0.5 sm:gap-1 mb-1 sm:mb-2">
                 {dayNames.map(d => (
-                  <div key={d} className="text-center text-[11px] font-semibold text-[#8A8A9A] py-2" style={{ fontFamily: 'var(--font-body)' }}>
+                  <div key={d} className="text-center text-[12px] font-semibold text-[#8A8A9A] py-1.5 sm:py-2" style={{ fontFamily: 'var(--font-body)' }}>
                     {d}
                   </div>
                 ))}
               </div>
 
               {/* Days */}
-              <div className="grid grid-cols-7 gap-1">
+              <div className="grid grid-cols-7 gap-0.5 sm:gap-1">
                 {cells.map((d, i) => {
                   if (d === null) return <div key={i} />;
                   const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
@@ -215,15 +215,16 @@ export function Calendar() {
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       transition={{ delay: i * 0.005 }}
-                      className={`aspect-square rounded-xl p-1.5 text-left transition-colors ${
+                      title={dayEvents.length ? dayEvents.map(e => e.title).join('\n') : undefined}
+                      className={`aspect-square min-w-0 rounded-lg sm:rounded-xl p-1 sm:p-1.5 flex flex-col items-center sm:items-start text-center sm:text-left transition-colors ${
                         isToday ? 'bg-[#7C6AF7] text-white' : dayEvents.length ? 'bg-[#EDE9FF]' : 'hover:bg-[#F5F4F2]'
                       }`}
                     >
-                      <p className={`text-[12px] font-semibold ${isToday ? 'text-white' : 'text-[#1A1A2E]'}`} style={{ fontFamily: 'var(--font-body)' }}>
+                      <p className={`text-[13px] sm:text-[12px] leading-5 font-semibold ${isToday ? 'text-white' : 'text-[#1A1A2E]'}`} style={{ fontFamily: 'var(--font-body)' }}>
                         {d}
                       </p>
                       {dayEvents.length > 0 && (
-                        <div className={`mt-1 flex gap-0.5 flex-wrap`}>
+                        <div className="mt-auto sm:mt-1 mb-0.5 sm:mb-0 flex gap-0.5 flex-wrap justify-center sm:justify-start">
                           {dayEvents.slice(0, 3).map((_, ei) => (
                             <span key={ei} className={`w-1.5 h-1.5 rounded-full ${isToday ? 'bg-white' : 'bg-[#7C6AF7]'}`} />
                           ))}
@@ -239,7 +240,7 @@ export function Calendar() {
 
         {/* Upcoming events */}
         <div>
-          <h2 className="text-[18px] font-bold text-[#1A1A2E] mb-4" style={{ fontFamily: 'var(--font-heading)' }}>Ближайшие события</h2>
+          <h2 className="text-[17px] sm:text-[18px] font-bold text-[#1A1A2E] mb-3 sm:mb-4" style={{ fontFamily: 'var(--font-heading)' }}>Ближайшие события</h2>
           {upcoming.length === 0 ? (
             <Card className="border-0">
               <CardContent className="p-6 text-center">
@@ -256,7 +257,7 @@ export function Calendar() {
                   <motion.div key={i} initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}>
                     <MaybeLink to={e.link}>
                     <Card className="border-0 hover:shadow-md transition-all">
-                      <CardContent className="p-4">
+                      <CardContent className="p-3 sm:p-4">
                         <div className="flex items-start gap-3">
                           <div className="w-9 h-9 rounded-xl bg-[#EDE9FF] flex items-center justify-center flex-shrink-0">
                             {e.type === 'homework'
@@ -265,20 +266,20 @@ export function Calendar() {
                             }
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-[13px] font-semibold text-[#1A1A2E] line-clamp-1" style={{ fontFamily: 'var(--font-body)' }}>
+                            <p className="text-[13px] font-semibold text-[#1A1A2E] line-clamp-2 break-words" style={{ fontFamily: 'var(--font-body)' }}>
                               {e.title}
                             </p>
                             {e.courseTitle && (
-                              <p className="text-[11px] text-[#8A8A9A] mb-1" style={{ fontFamily: 'var(--font-body)' }}>
+                              <p className="text-[12px] text-[#8A8A9A] mb-1 truncate" style={{ fontFamily: 'var(--font-body)' }}>
                                 {e.courseTitle}
                               </p>
                             )}
                             {e.note && (
-                              <p className="text-[11px] text-[#1A1A2E]/70 mb-1" style={{ fontFamily: 'var(--font-body)' }}>
+                              <p className="text-[12px] text-[#1A1A2E]/70 mb-1" style={{ fontFamily: 'var(--font-body)' }}>
                                 {e.note}
                               </p>
                             )}
-                            <Badge variant={days <= 0 ? 'destructive' : days < 3 ? 'warning' : 'secondary'} className="text-[10px]">
+                            <Badge variant={days <= 0 ? 'destructive' : days < 3 ? 'warning' : 'secondary'} className="text-[12px]">
                               {days === 0 ? 'Сегодня' : days === 1 ? 'Завтра' : `Через ${pluralize(days, ['день', 'дня', 'дней'])}`}
                             </Badge>
                           </div>

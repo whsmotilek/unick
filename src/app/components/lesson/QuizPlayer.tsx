@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CheckCircle2, XCircle, RotateCcw, Loader2 } from 'lucide-react';
+import { Check, CheckCircle2, XCircle, RotateCcw, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '../ui/button';
 import type { QuizQuestion } from '../../lib/lessonContent';
@@ -67,15 +67,15 @@ export function QuizPlayer({ lessonId, questions, passPercent = 70, completed }:
         const correctIds = key?.[q.id];
         return (
           <div key={q.id} className={`space-y-2 ${qWrong ? 'rounded-xl border-l-4 border-[#FF6B6B] pl-3' : ''}`}>
-            <p className="font-medium text-[#1A1A2E] flex items-start gap-2">
+            <p className="font-medium text-[16px] sm:text-[15px] leading-snug text-[#1A1A2E] flex items-start gap-2">
               {qRight && <CheckCircle2 className="w-4 h-4 text-[#2D9D5B] shrink-0 mt-1" />}
               {qWrong && <XCircle className="w-4 h-4 text-[#FF6B6B] shrink-0 mt-1" />}
-              <span>
+              <span className="min-w-0 break-words">
                 {i + 1}. {q.text}
-                {multiple && <span className="text-xs text-[#8A8A9A] font-normal ml-2">несколько ответов</span>}
+                {multiple && <span className="inline-block text-[12px] text-[#8A8A9A] font-normal ml-2 whitespace-nowrap">несколько ответов</span>}
               </span>
             </p>
-            <div className="space-y-1.5">
+            <div className="space-y-2 sm:space-y-1.5">
               {q.options.map(o => {
                 const selected = given.includes(o.id);
                 const isCorrect = correctIds?.includes(o.id) ?? false;
@@ -95,11 +95,16 @@ export function QuizPlayer({ lessonId, questions, passPercent = 70, completed }:
                 const showCheck = !!result && (correctIds ? isCorrect : selected && !qWrong);
                 const showCross = !!result && selected && (correctIds ? !isCorrect : qWrong);
                 return (
-                  <button key={o.id} type="button" onClick={() => toggle(q, o.id)} disabled={locked}
-                    className={`w-full text-left px-4 py-2.5 rounded-xl border text-sm transition-colors flex items-center gap-2 disabled:cursor-default ${cls}`}>
-                    {showCheck && <CheckCircle2 className="w-4 h-4 text-[#2D9D5B] shrink-0" />}
-                    {showCross && <XCircle className="w-4 h-4 text-[#FF6B6B] shrink-0" />}
-                    <span>{o.text}</span>
+                  <button key={o.id} type="button" onClick={() => toggle(q, o.id)} disabled={locked} aria-pressed={selected}
+                    className={`w-full text-left px-4 py-3 sm:py-2.5 min-h-12 sm:min-h-10 rounded-xl border text-[15px] sm:text-sm leading-snug transition-colors flex items-center gap-3 sm:gap-2 disabled:cursor-default active:scale-[0.99] ${cls}`}>
+                    {showCheck ? <CheckCircle2 className="w-4 h-4 text-[#2D9D5B] shrink-0" />
+                      : showCross ? <XCircle className="w-4 h-4 text-[#FF6B6B] shrink-0" />
+                      : !result && (
+                        <span aria-hidden className={`w-4 h-4 shrink-0 border-[1.5px] flex items-center justify-center ${multiple ? 'rounded-[4px]' : 'rounded-full'} ${selected ? 'border-[#7C6AF7] bg-[#7C6AF7]' : 'border-[#1A1A2E]/25 bg-white'}`}>
+                          {selected && (multiple ? <Check className="w-3 h-3 text-white" strokeWidth={3} /> : <span className="w-1.5 h-1.5 rounded-full bg-white" />)}
+                        </span>
+                      )}
+                    <span className="min-w-0 break-words">{o.text}</span>
                   </button>
                 );
               })}
@@ -110,7 +115,7 @@ export function QuizPlayer({ lessonId, questions, passPercent = 70, completed }:
 
       {result ? (
         <div className={`rounded-xl p-4 ${result.passed ? 'bg-[#E8F5DC] text-[#2D5016]' : 'bg-[#FFF4D6] text-[#5A4500]'}`}>
-          <p className="font-semibold">
+          <p className="font-semibold mb-1">
             {result.passed ? 'Тест пройден!' : 'Пока не получилось'} — {result.correct} из {result.total} ({result.percent}%)
           </p>
           {!result.passed && (
@@ -118,12 +123,12 @@ export function QuizPlayer({ lessonId, questions, passPercent = 70, completed }:
               Нужно набрать не меньше {threshold}%. Вопросы с ошибками отмечены красным — правильные ответы откроются после прохождения.
             </p>
           )}
-          <Button variant="outline" size="sm" className="mt-3" onClick={retry}>
+          <Button variant="outline" className="mt-3 h-11 sm:h-9 w-full sm:w-auto" onClick={retry}>
             <RotateCcw className="w-4 h-4 mr-1" />Пройти заново
           </Button>
         </div>
       ) : (
-        <Button onClick={check} disabled={!allAnswered || checking}>
+        <Button onClick={check} disabled={!allAnswered || checking} className="w-full sm:w-auto h-11 sm:h-10">
           {checking && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
           {checking ? 'Проверяем…' : 'Проверить ответы'}
         </Button>

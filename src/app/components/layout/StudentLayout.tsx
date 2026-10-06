@@ -59,10 +59,10 @@ export function StudentLayout() {
           </AvatarFallback>
         </Avatar>
         <div className="flex-1 min-w-0">
-          <p className="text-white text-xs font-medium truncate" style={{ fontFamily: 'var(--font-body)' }}>
+          <p className="text-white text-[13px] font-medium truncate" style={{ fontFamily: 'var(--font-body)' }}>
             {user?.name || 'Ученик'}
           </p>
-          <p className="text-[11px] text-white/50 truncate" style={{ fontFamily: 'var(--font-body)' }}>
+          <p className="text-[12px] text-white/50 truncate" style={{ fontFamily: 'var(--font-body)' }}>
             {user?.email}
           </p>
         </div>
@@ -72,13 +72,13 @@ export function StudentLayout() {
       <div className="grid grid-cols-2 gap-2 mb-3 rounded-lg bg-white/10 p-3 text-white">
         <div>
           <p className="text-[16px] font-bold leading-none" style={{ fontFamily: 'var(--font-heading)' }}>{completedCount}</p>
-          <p className="text-[10px] text-white/60 mt-1" style={{ fontFamily: 'var(--font-body)' }}>
+          <p className="text-[12px] leading-tight text-white/60 mt-1" style={{ fontFamily: 'var(--font-body)' }}>
             {plural(completedCount, ['урок пройден', 'урока пройдено', 'уроков пройдено'])}
           </p>
         </div>
         <div>
           <p className="text-[16px] font-bold leading-none" style={{ fontFamily: 'var(--font-heading)' }}>{activeCourses}</p>
-          <p className="text-[10px] text-white/60 mt-1" style={{ fontFamily: 'var(--font-body)' }}>
+          <p className="text-[12px] leading-tight text-white/60 mt-1" style={{ fontFamily: 'var(--font-body)' }}>
             {plural(activeCourses, ['курс в процессе', 'курса в процессе', 'курсов в процессе'])}
           </p>
         </div>
@@ -88,10 +88,10 @@ export function StudentLayout() {
         variant="ghost"
         size="sm"
         onClick={handleLogout}
-        className="w-full justify-start gap-2 text-white/50 hover:text-white hover:bg-white/10 h-8"
+        className="w-full justify-start gap-2 text-white/60 hover:text-white hover:bg-white/10 h-10"
       >
         <LogOut className="w-4 h-4" />
-        <span className="text-xs">Выйти</span>
+        <span className="text-[13px]">Выйти</span>
       </Button>
     </>
   );

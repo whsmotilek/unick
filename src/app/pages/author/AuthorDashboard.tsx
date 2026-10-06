@@ -73,46 +73,46 @@ export function AuthorDashboard() {
   ];
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-5 sm:mb-6 gap-3">
         <div>
-          <h1 className="text-[28px] font-bold text-[#1A1A2E] mb-1" style={{ fontFamily: 'var(--font-heading)' }}>
+          <h1 className="text-[24px] sm:text-[28px] leading-tight font-bold text-[#1A1A2E] mb-1 break-words" style={{ fontFamily: 'var(--font-heading)' }}>
             Добро пожаловать, {user?.name?.split(' ')[0] || 'Автор'}!
           </h1>
           <p className="text-[13px] text-[#8A8A9A]" style={{ fontFamily: 'var(--font-body)' }}>
             Обзор вашей онлайн-школы
           </p>
         </div>
-        <Link to="/author/courses/new">
-          <Button className="transition-transform active:scale-[0.98]">
+        <Button asChild className="w-full sm:w-auto transition-transform active:scale-[0.98]">
+          <Link to="/author/courses/new">
             <Plus className="w-4 h-4 mr-2" />Создать курс
-          </Button>
-        </Link>
+          </Link>
+        </Button>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
         {dashStats.map((s, i) => (
           <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
             <Card className={`${s.color} border-0`}>
-              <CardContent className="p-5">
-                <div className="flex items-start justify-between mb-3">
+              <CardContent className="p-4 sm:p-5">
+                <div className="flex items-start justify-between mb-2 sm:mb-3">
                   <s.icon className={`w-5 h-5 ${s.text}`} strokeWidth={1.5} />
                 </div>
-                <p className={`text-[28px] font-bold ${s.text}`} style={{ fontFamily: 'var(--font-heading)' }}>
+                <p className={`text-[24px] sm:text-[28px] leading-tight font-bold ${s.text}`} style={{ fontFamily: 'var(--font-heading)' }}>
                   <CountUp value={s.value} suffix={s.suffix} />
                 </p>
-                <p className="text-[11px] text-[#1A1A2E]/60 mt-1" style={{ fontFamily: 'var(--font-body)' }}>{s.label}</p>
+                <p className="text-[12px] leading-snug text-[#1A1A2E]/60 mt-1" style={{ fontFamily: 'var(--font-body)' }}>{s.label}</p>
               </CardContent>
             </Card>
           </motion.div>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 min-w-0">
         {/* Recent activity */}
         <div className="lg:col-span-2">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-[18px] font-bold text-[#1A1A2E]" style={{ fontFamily: 'var(--font-heading)' }}>Последняя активность</h2>
+            <h2 className="text-[17px] sm:text-[18px] font-bold text-[#1A1A2E]" style={{ fontFamily: 'var(--font-heading)' }}>Последняя активность</h2>
           </div>
           <Card className="border-0">
             <CardContent className="p-2">
@@ -128,10 +128,10 @@ export function AuthorDashboard() {
                         {item.userAvatar ? <img src={item.userAvatar} alt="" className="w-full h-full rounded-full object-cover" /> : item.userName.charAt(0)}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-[13px] text-[#1A1A2E]" style={{ fontFamily: 'var(--font-body)' }}>
+                        <p className="text-[13px] text-[#1A1A2E] break-words" style={{ fontFamily: 'var(--font-body)' }}>
                           <strong>{item.userName}</strong> {item.action}
                         </p>
-                        <p className="text-[11px] text-[#8A8A9A]" style={{ fontFamily: 'var(--font-body)' }}>
+                        <p className="text-[12px] text-[#8A8A9A] truncate" style={{ fontFamily: 'var(--font-body)' }}>
                           {item.courseTitle} · {new Date(item.time).toLocaleDateString('ru-RU')}
                         </p>
                       </div>
@@ -145,11 +145,11 @@ export function AuthorDashboard() {
 
         {/* Quick actions */}
         <div>
-          <h2 className="text-[18px] font-bold text-[#1A1A2E] mb-4" style={{ fontFamily: 'var(--font-heading)' }}>Быстрые действия</h2>
-          <div className="space-y-3">
-            <Link to="/author/courses">
+          <h2 className="text-[17px] sm:text-[18px] font-bold text-[#1A1A2E] mb-3 sm:mb-4" style={{ fontFamily: 'var(--font-heading)' }}>Быстрые действия</h2>
+          <div className="space-y-2 sm:space-y-3">
+            <Link to="/author/courses" className="block">
               <Card className="border-0 hover:shadow-[0_4px_20px_rgba(0,0,0,0.08)] transition-all cursor-pointer">
-                <CardContent className="p-4 flex items-center justify-between">
+                <CardContent className="p-3 sm:p-4 min-h-14 flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-9 h-9 rounded-xl bg-[#EDE9FF] flex items-center justify-center"><BookOpen className="w-4 h-4 text-[#7C6AF7]" /></div>
                     <span className="text-[13px] font-semibold text-[#1A1A2E]" style={{ fontFamily: 'var(--font-body)' }}>Управление курсами</span>
@@ -158,9 +158,9 @@ export function AuthorDashboard() {
                 </CardContent>
               </Card>
             </Link>
-            <Link to="/author/homework">
+            <Link to="/author/homework" className="block">
               <Card className="border-0 hover:shadow-[0_4px_20px_rgba(0,0,0,0.08)] transition-all cursor-pointer">
-                <CardContent className="p-4 flex items-center justify-between">
+                <CardContent className="p-3 sm:p-4 min-h-14 flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-9 h-9 rounded-xl bg-[#FFE5D9] flex items-center justify-center"><FileCheck className="w-4 h-4 text-[#FF6B6B]" /></div>
                     <span className="text-[13px] font-semibold text-[#1A1A2E]" style={{ fontFamily: 'var(--font-body)' }}>Проверка ДЗ</span>
@@ -169,9 +169,9 @@ export function AuthorDashboard() {
                 </CardContent>
               </Card>
             </Link>
-            <Link to="/author/students">
+            <Link to="/author/students" className="block">
               <Card className="border-0 hover:shadow-[0_4px_20px_rgba(0,0,0,0.08)] transition-all cursor-pointer">
-                <CardContent className="p-4 flex items-center justify-between">
+                <CardContent className="p-3 sm:p-4 min-h-14 flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-9 h-9 rounded-xl bg-[#B8D8F8] flex items-center justify-center"><Users className="w-4 h-4 text-[#0D3B66]" /></div>
                     <span className="text-[13px] font-semibold text-[#1A1A2E]" style={{ fontFamily: 'var(--font-body)' }}>Ученики</span>
@@ -180,9 +180,9 @@ export function AuthorDashboard() {
                 </CardContent>
               </Card>
             </Link>
-            <Link to="/author/analytics">
+            <Link to="/author/analytics" className="block">
               <Card className="border-0 hover:shadow-[0_4px_20px_rgba(0,0,0,0.08)] transition-all cursor-pointer">
-                <CardContent className="p-4 flex items-center justify-between">
+                <CardContent className="p-3 sm:p-4 min-h-14 flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-9 h-9 rounded-xl bg-[#C5E8A0] flex items-center justify-center"><TrendingUp className="w-4 h-4 text-[#2D5016]" /></div>
                     <span className="text-[13px] font-semibold text-[#1A1A2E]" style={{ fontFamily: 'var(--font-body)' }}>Аналитика</span>

@@ -57,29 +57,36 @@ export function NotificationBell({ variant = 'light', side = 'bottom', align = '
       <PopoverTrigger asChild>
         <button
           type="button"
-          className={`relative p-2 rounded-lg transition-colors outline-none focus-visible:ring-2 ${triggerCls}`}
+          className={`relative w-10 h-10 flex items-center justify-center rounded-lg transition-colors outline-none focus-visible:ring-2 ${triggerCls}`}
           aria-label={unread.length ? `Уведомления: ${unread.length} непрочитанных` : 'Уведомления'}
         >
           <Bell className="w-5 h-5" strokeWidth={1.5} />
           {unread.length > 0 && (
             <span
-              className={`absolute top-1 right-1 min-w-[16px] h-4 px-1 rounded-full bg-[#7C6AF7] text-white text-[10px] font-semibold leading-4 text-center border ${variant === 'dark' ? 'border-[#1A1A2E]' : 'border-white'}`}
+              className={`absolute top-1 right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-[#7C6AF7] text-white text-[10px] font-semibold leading-4 text-center border ${variant === 'dark' ? 'border-[#1A1A2E]' : 'border-white'}`}
             >
               {badge}
             </span>
           )}
         </button>
       </PopoverTrigger>
-      <PopoverContent side={side} align={align} sideOffset={8} className="w-[340px] max-w-[calc(100vw-32px)] p-0 overflow-hidden rounded-2xl bg-white text-[#1A1A2E] border-[#1A1A2E]/10">
-        <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-[#1A1A2E]/5">
-          <p className="text-sm font-semibold" style={{ fontFamily: 'var(--font-heading)' }}>Уведомления</p>
+      <PopoverContent
+        side={side}
+        align={align}
+        sideOffset={8}
+        collisionPadding={8}
+        className="w-[min(360px,calc(100vw-16px))] p-0 overflow-hidden rounded-2xl bg-white text-[#1A1A2E] border-[#1A1A2E]/10"
+      >
+        <div className="flex items-center justify-between gap-2 pl-4 pr-2 py-1.5 border-b border-[#1A1A2E]/5">
+          <p className="text-sm font-semibold py-2" style={{ fontFamily: 'var(--font-heading)' }}>Уведомления</p>
           {unread.length > 0 && (
             <button
               type="button"
               onClick={() => markNotificationsRead(unread.map(n => n.id))}
-              className="text-[12px] text-[#7C6AF7] hover:underline flex items-center gap-1"
+              className="text-[12px] text-[#7C6AF7] hover:bg-[#EDE9FF]/60 rounded-lg px-2 min-h-9 flex items-center gap-1 whitespace-nowrap"
+              title="Отметить все прочитанными"
             >
-              <CheckCheck className="w-3.5 h-3.5" />Отметить все прочитанными
+              <CheckCheck className="w-3.5 h-3.5 shrink-0" />Прочитать все
             </button>
           )}
         </div>
@@ -89,7 +96,7 @@ export function NotificationBell({ variant = 'light', side = 'bottom', align = '
             <p className="text-sm text-[#8A8A9A]">Уведомлений пока нет</p>
           </div>
         ) : (
-          <ul className="max-h-[min(420px,60vh)] overflow-y-auto divide-y divide-[#1A1A2E]/5">
+          <ul className="max-h-[min(420px,60dvh)] overflow-y-auto overscroll-contain divide-y divide-[#1A1A2E]/5">
             {list.map(n => (
               <li key={n.id}>
                 <button
@@ -99,9 +106,9 @@ export function NotificationBell({ variant = 'light', side = 'bottom', align = '
                 >
                   <span className={`mt-1.5 w-2 h-2 rounded-full shrink-0 ${n.read ? 'bg-transparent' : 'bg-[#7C6AF7]'}`} />
                   <span className="min-w-0 flex-1">
-                    <span className={`block text-[13px] ${n.read ? 'text-[#1A1A2E]/80' : 'font-semibold text-[#1A1A2E]'}`}>{n.title}</span>
-                    {n.body && <span className="block text-[12px] text-[#8A8A9A] line-clamp-2 mt-0.5">{n.body}</span>}
-                    <span className="block text-[11px] text-[#8A8A9A] mt-1">{relativeTimeRu(n.createdAt)}</span>
+                    <span className={`block text-[14px] leading-snug break-words ${n.read ? 'text-[#1A1A2E]/80' : 'font-semibold text-[#1A1A2E]'}`}>{n.title}</span>
+                    {n.body && <span className="block text-[13px] text-[#8A8A9A] line-clamp-2 break-words mt-0.5">{n.body}</span>}
+                    <span className="block text-[12px] text-[#8A8A9A] mt-1">{relativeTimeRu(n.createdAt)}</span>
                   </span>
                 </button>
               </li>

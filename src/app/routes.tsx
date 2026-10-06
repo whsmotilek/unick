@@ -123,11 +123,11 @@ export const router = createBrowserRouter([
   {
     path: '*',
     element: (
-      <div className="min-h-screen flex items-center justify-center bg-[#F5F4F2]">
+      <div className="min-h-screen min-h-[100dvh] flex items-center justify-center bg-[#F5F4F2] px-4">
         <div className="text-center">
-          <h1 className="text-[64px] font-bold text-[#1A1A2E] mb-2" style={{ fontFamily: 'var(--font-heading)' }}>404</h1>
-          <p className="text-[16px] text-[#8A8A9A] mb-6" style={{ fontFamily: 'var(--font-body)' }}>Страница не найдена</p>
-          <Link to="/" className="text-[#7C6AF7] hover:underline font-medium" style={{ fontFamily: 'var(--font-body)' }}>← Вернуться на главную</Link>
+          <h1 className="text-[56px] sm:text-[64px] leading-none font-bold text-[#1A1A2E] mb-3" style={{ fontFamily: 'var(--font-heading)' }}>404</h1>
+          <p className="text-[16px] text-[#8A8A9A] mb-4 sm:mb-6" style={{ fontFamily: 'var(--font-body)' }}>Страница не найдена</p>
+          <Link to="/" className="inline-flex items-center min-h-11 px-4 text-[#7C6AF7] hover:underline font-medium" style={{ fontFamily: 'var(--font-body)' }}>← Вернуться на главную</Link>
         </div>
       </div>
     ),

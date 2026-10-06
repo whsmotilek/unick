@@ -10,7 +10,7 @@ import { motion } from 'motion/react';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'sonner';
 import { UserRole } from '../../types';
-import { AuthShell, inputClass } from './AuthShell';
+import { AuthShell, inputClass, tapLink } from './AuthShell';
 import { homeFor, safeNext } from '../../lib/navigation';
 
 const benefits = {
@@ -30,9 +30,9 @@ const benefits = {
 
 function Consent({ id }: { id: string }) {
   return (
-    <div className="flex items-start gap-2">
-      <input type="checkbox" id={id} className="mt-1 w-4 h-4" required />
-      <label htmlFor={id} className="text-sm text-[#8A8A9A]" style={{ fontFamily: 'var(--font-body)' }}>
+    <div className="flex items-start gap-3 sm:gap-2">
+      <input type="checkbox" id={id} className="mt-0.5 sm:mt-1 w-5 h-5 sm:w-4 sm:h-4 shrink-0 accent-[#7C6AF7] cursor-pointer" required />
+      <label htmlFor={id} className="text-sm leading-relaxed sm:leading-normal text-[#8A8A9A] cursor-pointer" style={{ fontFamily: 'var(--font-body)' }}>
         Принимаю{' '}
         <Link to="/legal/terms" target="_blank" className="text-[#7C6AF7] hover:underline">условия использования</Link>{' '}
         и даю{' '}
@@ -81,7 +81,7 @@ export function Register() {
     return (
       <AuthShell subtitle="Остался один шаг">
         <Card className="border-0 shadow-[0_8px_30px_rgba(0,0,0,0.08)]">
-          <CardContent className="p-8 text-center">
+          <CardContent className="p-6 sm:p-8 text-center">
             <MailCheck className="w-12 h-12 mx-auto mb-4 text-[#7C6AF7]" strokeWidth={1.5} />
             <h2 className="text-[20px] font-bold mb-2" style={{ fontFamily: 'var(--font-heading)' }}>Подтвердите email</h2>
             <p className="text-sm text-[#8A8A9A]" style={{ fontFamily: 'var(--font-body)' }}>
@@ -115,18 +115,18 @@ export function Register() {
 
   return (
     <AuthShell subtitle={studentOnly ? 'Создайте аккаунт, чтобы получить доступ к курсу' : 'Создайте аккаунт за 2 минуты'} wide>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         <div className="lg:col-span-2">
           <Card className="border-0 shadow-[0_8px_30px_rgba(0,0,0,0.08)]">
-            <CardContent className="p-8">
+            <CardContent className="p-5 sm:p-8">
               <Tabs value={activeTab} onValueChange={v => setActiveTab(v as 'student' | 'author')} className="w-full">
                 {!studentOnly && (
-                  <TabsList className="grid w-full grid-cols-2 mb-6 bg-[#F5F4F2] p-1 rounded-xl">
-                    <TabsTrigger value="student" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all">
+                  <TabsList className="grid w-full grid-cols-2 h-12 sm:h-11 mb-5 sm:mb-6 bg-[#F5F4F2] p-1 rounded-xl">
+                    <TabsTrigger value="student" className="h-full rounded-lg text-[15px] sm:text-sm data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all">
                       <GraduationCap className="w-4 h-4 mr-2" />
                       Я ученик
                     </TabsTrigger>
-                    <TabsTrigger value="author" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all">
+                    <TabsTrigger value="author" className="h-full rounded-lg text-[15px] sm:text-sm data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all">
                       <BookOpen className="w-4 h-4 mr-2" />
                       Я автор
                     </TabsTrigger>
@@ -160,7 +160,7 @@ export function Register() {
 
               <div className="mt-6 text-center text-sm text-[#8A8A9A]" style={{ fontFamily: 'var(--font-body)' }}>
                 Уже есть аккаунт?{' '}
-                <Link to={loginLink} className="text-[#7C6AF7] hover:underline font-medium">Войти</Link>
+                <Link to={loginLink} className={`${tapLink} text-[#7C6AF7] hover:underline font-medium`}>Войти</Link>
               </div>
             </CardContent>
           </Card>
@@ -168,7 +168,7 @@ export function Register() {
 
         <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, delay: 0.2 }}>
           <Card className="bg-gradient-to-br from-[#7C6AF7] to-[#9B8AF9] text-white border-0">
-            <CardContent className="p-6">
+            <CardContent className="p-5 sm:p-6">
               <h3 className="font-semibold mb-4 text-[16px]" style={{ fontFamily: 'var(--font-heading)' }}>
                 {activeTab === 'student' ? 'Для ученика' : 'Для автора'}
               </h3>

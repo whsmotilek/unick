@@ -36,21 +36,25 @@ function QuizEditor({ questions, onChange }: { questions: QuizQuestion[]; onChan
   return (
     <div className="space-y-4">
       {questions.map((q, i) => (
-        <div key={q.id} className="rounded-xl border border-[#1A1A2E]/10 p-3 space-y-2">
-          <div className="flex gap-2 items-start">
-            <span className="text-sm font-semibold text-[#8A8A9A] mt-2.5">{i + 1}.</span>
-            <Input value={q.text} onChange={e => update(i, { text: e.target.value })} placeholder="Текст вопроса" />
-            <Button type="button" variant="ghost" size="icon" aria-label="Удалить вопрос" onClick={() => onChange(questions.filter((_, idx) => idx !== i))}>
+        <div key={q.id} className="rounded-xl border border-[#1A1A2E]/10 p-2.5 sm:p-3 space-y-2">
+          <div className="flex gap-1.5 sm:gap-2 items-start">
+            <span className="w-6 shrink-0 text-center text-sm font-semibold text-[#8A8A9A] mt-2.5 tabular-nums">{i + 1}.</span>
+            <Input value={q.text} onChange={e => update(i, { text: e.target.value })} placeholder="Текст вопроса" aria-label={`Вопрос ${i + 1}`} />
+            <Button type="button" variant="ghost" size="icon" className="shrink-0" aria-label="Удалить вопрос" onClick={() => onChange(questions.filter((_, idx) => idx !== i))}>
               <Trash2 className="w-4 h-4 text-[#FF6B6B]" />
             </Button>
           </div>
           {q.options.map((o, oi) => {
             const isCorrect = q.correct.includes(o.id);
             return (
-              <div key={o.id} className="flex gap-2 items-center pl-6">
+              <div key={o.id} className="flex gap-1.5 sm:gap-2 items-center">
+                {/* Зона нажатия 40×40 (на ≥sm — компактнее), иконка 20px */}
                 <button
                   type="button"
                   title={isCorrect ? 'Правильный ответ' : 'Отметить правильным'}
+                  aria-label={isCorrect ? 'Правильный ответ' : 'Отметить правильным'}
+                  aria-pressed={isCorrect}
+                  className="shrink-0 w-6 h-10 sm:h-9 flex items-center justify-center rounded-lg max-sm:-mx-1 max-sm:w-8 touch-manipulation"
                   onClick={() => update(i, { correct: isCorrect ? q.correct.filter(id => id !== o.id) : [...q.correct, o.id] })}
                 >
                   {isCorrect ? <CheckCircle2 className="w-5 h-5 text-[#2D9D5B]" /> : <Circle className="w-5 h-5 text-[#8A8A9A]" />}
@@ -59,24 +63,27 @@ function QuizEditor({ questions, onChange }: { questions: QuizQuestion[]; onChan
                   value={o.text}
                   onChange={e => update(i, { options: q.options.map((x, xi) => (xi === oi ? { ...x, text: e.target.value } : x)) })}
                   placeholder={`Вариант ${oi + 1}`}
-                  className="h-9"
+                  className="h-10 sm:h-9"
                 />
-                {q.options.length > 2 && (
-                  <Button type="button" variant="ghost" size="icon" aria-label="Удалить вариант"
+                {q.options.length > 2 ? (
+                  <Button type="button" variant="ghost" size="icon" className="shrink-0" aria-label="Удалить вариант"
                     onClick={() => update(i, { options: q.options.filter(x => x.id !== o.id), correct: q.correct.filter(id => id !== o.id) })}>
                     <Trash2 className="w-3.5 h-3.5 text-[#8A8A9A]" />
                   </Button>
+                ) : (
+                  // Держим колонку, чтобы поля вариантов были одной ширины с полем вопроса
+                  <span className="size-10 shrink-0" aria-hidden />
                 )}
               </div>
             );
           })}
-          <Button type="button" variant="ghost" size="sm" className="ml-6"
+          <Button type="button" variant="ghost" size="sm" className="ml-[30px] sm:ml-8 max-sm:h-10"
             onClick={() => update(i, { options: [...q.options, { id: crypto.randomUUID(), text: '' }] })}>
             <Plus className="w-3.5 h-3.5 mr-1" />Вариант
           </Button>
         </div>
       ))}
-      <Button type="button" variant="outline" size="sm" onClick={() => onChange([...questions, newQuestion()])}>
+      <Button type="button" variant="outline" size="sm" className="max-sm:h-10 max-sm:w-full" onClick={() => onChange([...questions, newQuestion()])}>
         <Plus className="w-4 h-4 mr-1" />Добавить вопрос
       </Button>
       <p className="text-xs text-[#8A8A9A]">Отметьте галочкой правильные ответы. Если правильных несколько, ученик должен выбрать все.</p>
@@ -145,11 +152,12 @@ export function LessonEditorDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      {/* Шапка и кнопки закреплены, прокручивается только форма. На телефоне — на весь экран */}
+      <DialogContent className="sm:max-w-3xl flex flex-col gap-0 p-0 max-sm:p-0 overflow-hidden max-h-[90vh] max-sm:inset-0 max-sm:translate-x-0 max-sm:translate-y-0 max-sm:max-w-none max-sm:w-full max-sm:h-[100dvh] max-sm:max-h-none max-sm:rounded-none max-sm:border-0">
+        <DialogHeader className="shrink-0 px-4 sm:px-6 pt-4 sm:pt-6 pb-3 sm:pb-2 pr-14 max-sm:border-b max-sm:border-[#1A1A2E]/5 max-sm:text-left">
           <DialogTitle>{initial ? 'Редактировать урок' : 'Новый урок'}</DialogTitle>
         </DialogHeader>
-        <div className="space-y-5 py-2">
+        <div data-scroll className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 sm:px-6 py-4 sm:py-2 space-y-5 scroll-pb-24">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="sm:col-span-2">
               <Label htmlFor="lesson-title">Название</Label>
@@ -173,20 +181,20 @@ export function LessonEditorDialog({
                 <Input id="lesson-video" value={data.url && !data.url.startsWith('data:') ? data.url : ''} onChange={e => patch({ url: e.target.value })}
                   placeholder="Ссылка на YouTube, VK Видео, Rutube или Kinescope" />
                 <FileUpload bucket="lesson-files" pathPrefix={`${courseId}/video`} accept="video/mp4,video/webm,video/quicktime"
-                  label="Загрузить файл" onUploaded={f => patch({ url: f.path })} />
+                  label="Загрузить файл" className="max-sm:h-10 sm:h-10" onUploaded={f => patch({ url: f.path })} />
               </div>
               <p className="text-xs text-[#8A8A9A]">
                 Для платного курса лучше использовать Kinescope или загружать файл: ссылку на YouTube ученик может переслать кому угодно.
               </p>
-              {data.url && <div className="max-w-md"><VideoPlayer url={data.url} title={title} /></div>}
+              {data.url && <div className="sm:max-w-md"><VideoPlayer url={data.url} title={title} /></div>}
             </div>
           )}
 
           {type === 'quiz' ? (
             <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <Label htmlFor="pass">Порог прохождения</Label>
-                <Input id="pass" type="number" min={0} max={100} className="w-24 h-9" value={data.passPercent ?? 70}
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                <Label htmlFor="pass" className="max-sm:w-full">Порог прохождения</Label>
+                <Input id="pass" type="number" inputMode="numeric" min={0} max={100} className="w-24 h-10 sm:h-9" value={data.passPercent ?? 70}
                   onChange={e => patch({ passPercent: Math.max(0, Math.min(100, Number(e.target.value) || 0)) })} />
                 <span className="text-sm text-[#8A8A9A]">% правильных ответов</span>
               </div>
@@ -201,19 +209,19 @@ export function LessonEditorDialog({
           )}
 
           {type === 'homework' && (
-            <div className="flex items-center gap-3">
-              <Label htmlFor="deadline">Срок сдачи</Label>
-              <Input id="deadline" type="number" min={0} className="w-24 h-9" value={data.deadlineDays ?? ''}
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+              <Label htmlFor="deadline" className="max-sm:w-full">Срок сдачи</Label>
+              <Input id="deadline" type="number" inputMode="numeric" min={0} className="w-24 h-10 sm:h-9" value={data.deadlineDays ?? ''}
                 onChange={e => patch({ deadlineDays: e.target.value ? Math.max(0, Number(e.target.value)) : undefined })} placeholder="—" />
-              <span className="text-sm text-[#8A8A9A]">дней после начала обучения (пусто — без срока)</span>
+              <span className="text-sm text-[#8A8A9A] min-w-0 flex-1 sm:flex-none">дней после начала обучения (пусто — без срока)</span>
             </div>
           )}
 
           {type !== 'quiz' && (
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <Label>Материалы к уроку</Label>
-                <FileUpload bucket="lesson-files" pathPrefix={`${courseId}/files`} label="Прикрепить файл"
+                <FileUpload bucket="lesson-files" pathPrefix={`${courseId}/files`} label="Прикрепить файл" className="max-sm:h-10"
                   onUploaded={f => addFile({ path: f.path, name: f.name, size: f.size })} />
               </div>
               <FileList files={files} bucket="lesson-files" onRemove={i => patch({ files: files.filter((_, idx) => idx !== i) })} />
@@ -221,9 +229,9 @@ export function LessonEditorDialog({
             </div>
           )}
         </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Отмена</Button>
-          <Button onClick={save}>{initial ? 'Сохранить' : 'Добавить урок'}</Button>
+        <DialogFooter className="shrink-0 px-4 sm:px-6 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:pb-6 sm:pt-4 max-sm:flex-row max-sm:border-t max-sm:border-[#1A1A2E]/5 max-sm:bg-background">
+          <Button variant="outline" className="max-sm:flex-1" onClick={() => onOpenChange(false)}>Отмена</Button>
+          <Button className="max-sm:flex-1" onClick={save}>{initial ? 'Сохранить' : 'Добавить урок'}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

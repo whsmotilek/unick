@@ -63,13 +63,13 @@ export function AuthorStudents() {
     : 0;
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-[28px] font-bold text-[#1A1A2E]" style={{ fontFamily: 'var(--font-heading)' }}>Ученики</h1>
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto">
+      <div className="mb-5 sm:mb-6">
+        <h1 className="text-[24px] sm:text-[28px] leading-tight font-bold text-[#1A1A2E] mb-1" style={{ fontFamily: 'var(--font-heading)' }}>Ученики</h1>
         <p className="text-[13px] text-[#8A8A9A]" style={{ fontFamily: 'var(--font-body)' }}>Все ученики на ваших курсах</p>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-5 sm:mb-6">
         {[
           { label: 'Всего', value: totalStudents, color: 'bg-[#EDE9FF]', text: 'text-[#7C6AF7]' },
           { label: 'Активных', value: activeStudents, color: 'bg-[#C5E8A0]', text: 'text-[#2D5016]' },
@@ -77,9 +77,9 @@ export function AuthorStudents() {
           { label: 'Средний прогресс', value: avgProgress, suffix: '%', color: 'bg-[#FFE5D9]', text: 'text-[#FF6B6B]' },
         ].map((s, i) => (
           <Card key={i} className={`${s.color} border-0`}>
-            <CardContent className="p-5">
-              <p className="text-[12px] text-[#1A1A2E]/60 mb-1" style={{ fontFamily: 'var(--font-body)' }}>{s.label}</p>
-              <p className={`text-[28px] font-bold ${s.text}`} style={{ fontFamily: 'var(--font-heading)' }}>
+            <CardContent className="p-4 sm:p-5">
+              <p className="text-[12px] leading-snug text-[#1A1A2E]/60 mb-1" style={{ fontFamily: 'var(--font-body)' }}>{s.label}</p>
+              <p className={`text-[24px] sm:text-[28px] leading-tight font-bold ${s.text}`} style={{ fontFamily: 'var(--font-heading)' }}>
                 <CountUp value={s.value} suffix={s.suffix} />
               </p>
             </CardContent>
@@ -87,13 +87,13 @@ export function AuthorStudents() {
         ))}
       </div>
 
-      <div className="relative max-w-md mb-6">
+      <div className="relative sm:max-w-md mb-4 sm:mb-6">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8A8A9A]" />
         <Input
           placeholder="Поиск учеников..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-9 bg-white border-[#1A1A2E]/10"
+          className="pl-9 h-11 sm:h-10 bg-white border-[#1A1A2E]/10"
         />
       </div>
 
@@ -105,7 +105,7 @@ export function AuthorStudents() {
         />
       ) : (
         <Card className="border-0">
-          <CardContent className="p-2">
+          <CardContent className="p-1 sm:p-2">
             <div className="divide-y divide-[#1A1A2E]/5">
               {filtered.map((s, i) => {
                 const avgPct = Math.round(s.courses.reduce((sum, c) => sum + c.progress, 0) / s.courses.length);
@@ -115,7 +115,7 @@ export function AuthorStudents() {
                     initial={{ opacity: 0, y: 5 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.03 }}
-                    className="flex items-center gap-4 p-4 hover:bg-[#F5F4F2]/50 transition-colors rounded-lg"
+                    className="flex items-start md:items-center gap-3 sm:gap-4 p-3 sm:p-4 hover:bg-[#F5F4F2]/50 transition-colors rounded-lg"
                   >
                     <Avatar className="w-10 h-10 shrink-0">
                       <AvatarImage src={s.user.avatar} />
@@ -125,26 +125,34 @@ export function AuthorStudents() {
                     </Avatar>
                     <div className="flex-1 min-w-0">
                       <p className="text-[13px] font-semibold text-[#1A1A2E] truncate" style={{ fontFamily: 'var(--font-body)' }}>{s.user.name}</p>
-                      <p className="text-[11px] text-[#8A8A9A] truncate" style={{ fontFamily: 'var(--font-body)' }}>{s.user.email}</p>
+                      <p className="text-[12px] text-[#8A8A9A] truncate" style={{ fontFamily: 'var(--font-body)' }}>{s.user.email}</p>
+                      {/* На телефоне курсы и прогресс — под именем, на всю ширину строки */}
+                      <p className="md:hidden text-[12px] text-[#8A8A9A] truncate mt-1" style={{ fontFamily: 'var(--font-body)' }} title={s.courses.map(c => c.title).join(', ')}>
+                        {s.courses.length === 1 ? s.courses[0].title : pluralize(s.courses.length, ['курс', 'курса', 'курсов'])}
+                      </p>
+                      <div className="md:hidden flex items-center gap-2 mt-1.5">
+                        <Progress value={avgPct} className="h-1.5 flex-1" aria-label="Прогресс" />
+                        <span className="text-[12px] font-semibold text-[#1A1A2E] w-9 text-right">{avgPct}%</span>
+                      </div>
                     </div>
                     <div className="hidden md:block flex-1 min-w-0 max-w-xs">
-                      <p className="text-[11px] text-[#8A8A9A] mb-1" style={{ fontFamily: 'var(--font-body)' }}>
+                      <p className="text-[12px] text-[#8A8A9A] mb-1" style={{ fontFamily: 'var(--font-body)' }}>
                         {pluralize(s.courses.length, ['курс', 'курса', 'курсов'])}
                       </p>
                       <div className="flex flex-wrap gap-1 min-w-0">
                         {s.courses.slice(0, 2).map(c => (
-                          <Badge key={c.id} variant="secondary" title={c.title} className="text-[10px] max-w-full shrink justify-start">
+                          <Badge key={c.id} variant="secondary" title={c.title} className="text-[11px] max-w-full shrink justify-start">
                             <span className="truncate">{c.title}</span>
                           </Badge>
                         ))}
-                        {s.courses.length > 2 && <Badge variant="secondary" className="text-[10px]">+{s.courses.length - 2}</Badge>}
+                        {s.courses.length > 2 && <Badge variant="secondary" className="text-[11px]">+{s.courses.length - 2}</Badge>}
                       </div>
                     </div>
-                    <div className="w-24 shrink-0">
-                      <p className="text-[11px] text-[#8A8A9A] mb-1" style={{ fontFamily: 'var(--font-body)' }}>Прогресс</p>
+                    <div className="hidden md:block w-28 shrink-0">
+                      <p className="text-[12px] text-[#8A8A9A] mb-1" style={{ fontFamily: 'var(--font-body)' }}>Прогресс</p>
                       <div className="flex items-center gap-2">
                         <Progress value={avgPct} className="h-1.5 flex-1" />
-                        <span className="text-[11px] font-semibold text-[#1A1A2E]">{avgPct}%</span>
+                        <span className="text-[12px] font-semibold text-[#1A1A2E]">{avgPct}%</span>
                       </div>
                     </div>
                   </motion.div>

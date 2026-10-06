@@ -3,7 +3,7 @@ import { NotificationBell } from '../../components/NotificationBell';
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import {
-  LogOut, Users, School, BookOpen, GraduationCap, CheckCircle2, FileCheck, Target, UserPlus, RefreshCw,
+  LogOut, Users, School, BookOpen, GraduationCap, CheckCircle2, FileCheck, Target, UserPlus, RefreshCw, LayoutDashboard,
 } from 'lucide-react';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -82,22 +82,25 @@ export function AdminDashboard() {
   };
 
   const header = (
-    <header className="bg-[#1A1A2E] text-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center gap-3">
-        <img src={logoWhiteFull} alt="Unick" className="h-6 w-auto" />
+    <header className="bg-[#1A1A2E] text-white sticky top-0 z-40 pt-[env(safe-area-inset-top)]">
+      <div className="max-w-7xl mx-auto pl-4 pr-2 sm:px-6 h-14 flex items-center gap-2 sm:gap-3">
+        <img src={logoWhiteFull} alt="Unick" className="h-5 sm:h-6 w-auto shrink-0" />
         <span className="hidden sm:inline text-[12px] text-white/50 border-l border-white/15 pl-3" style={body}>Панель пилота</span>
-        <div className="ml-auto flex items-center gap-2 min-w-0">
+        <div className="ml-auto flex items-center gap-0.5 sm:gap-2 min-w-0">
           <span className="hidden md:inline text-[12px] text-white/60 truncate max-w-[220px]" style={body}>{user?.email}</span>
           {user?.schoolId && (
-            <Button asChild variant="ghost" size="sm" className="text-white/80 hover:text-white hover:bg-white/10">
-              <Link to="/author">Кабинет автора</Link>
+            <Button asChild variant="ghost" size="sm" className="text-white/80 hover:text-white hover:bg-white/10 max-sm:size-10 max-sm:px-0">
+              <Link to="/author" aria-label="Кабинет автора" title="Кабинет автора">
+                <LayoutDashboard className="w-4 h-4 sm:hidden" />
+                <span className="hidden sm:inline">Кабинет автора</span>
+              </Link>
             </Button>
           )}
           <NotificationBell variant="dark" />
-          <Button variant="ghost" size="sm" onClick={handleRefresh} disabled={refreshing} className="text-white/80 hover:text-white hover:bg-white/10" aria-label="Обновить данные">
+          <Button variant="ghost" size="sm" onClick={handleRefresh} disabled={refreshing} className="text-white/80 hover:text-white hover:bg-white/10 max-sm:size-10 max-sm:px-0" aria-label="Обновить данные" title="Обновить данные">
             <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
           </Button>
-          <Button variant="ghost" size="sm" onClick={handleLogout} className="text-white/80 hover:text-white hover:bg-white/10">
+          <Button variant="ghost" size="sm" onClick={handleLogout} aria-label="Выйти" className="text-white/80 hover:text-white hover:bg-white/10 max-sm:size-10 max-sm:px-0">
             <LogOut className="w-4 h-4 sm:mr-1.5" />
             <span className="hidden sm:inline">Выйти</span>
           </Button>
@@ -131,9 +134,9 @@ export function AdminDashboard() {
       {header}
       <DemoBanner />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-5 sm:py-6 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
         <div className="mb-6">
-          <h1 className="text-[24px] sm:text-[28px] font-bold text-[#1A1A2E]" style={heading}>Как идёт пилот</h1>
+          <h1 className="text-[24px] sm:text-[28px] leading-tight font-bold text-[#1A1A2E] mb-1" style={heading}>Как идёт пилот</h1>
           <p className="text-[13px] text-[#8A8A9A]" style={body}>Все школы, курсы и ученики платформы</p>
         </div>
 
@@ -149,14 +152,14 @@ export function AdminDashboard() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
               {goals.map(g => (
                 <div key={g.key}>
-                  <div className="flex items-baseline justify-between mb-2">
-                    <span className="text-[13px] text-[#1A1A2E]" style={body}>{g.label}</span>
-                    <span className="text-[13px] text-[#8A8A9A]" style={body}>
+                  <div className="flex items-baseline justify-between gap-2 mb-2">
+                    <span className="text-[13px] text-[#1A1A2E] min-w-0" style={body}>{g.label}</span>
+                    <span className="text-[13px] text-[#8A8A9A] shrink-0 whitespace-nowrap" style={body}>
                       <span className="text-[20px] font-bold text-[#1A1A2E]" style={heading}>{g.value}</span> / {g.target}
                     </span>
                   </div>
                   <Progress value={g.percent} className="h-2.5" />
-                  <p className="text-[11px] text-[#8A8A9A] mt-1.5" style={body}>
+                  <p className="text-[12px] text-[#8A8A9A] mt-1.5" style={body}>
                     {g.value >= g.target ? 'Цель достигнута' : `Осталось ${g.target - g.value} · ${g.percent}%`}
                   </p>
                 </div>
@@ -173,7 +176,7 @@ export function AdminDashboard() {
                 <s.icon className={`w-5 h-5 ${s.text} mb-3`} strokeWidth={1.5} />
                 <p className={`text-[24px] sm:text-[28px] leading-tight font-bold ${s.text}`} style={heading}>{s.value}</p>
                 <p className="text-[12px] font-medium text-[#1A1A2E] mt-1" style={body}>{s.label}</p>
-                <p className="text-[11px] text-[#1A1A2E]/55" style={body}>{s.hint}</p>
+                <p className="text-[12px] leading-snug text-[#1A1A2E]/55" style={body}>{s.hint}</p>
               </CardContent>
             </Card>
           ))}
@@ -196,7 +199,7 @@ export function AdminDashboard() {
                   {ENROLLMENT_SOURCES.map(s => (
                     <div key={s} className="flex items-center gap-2">
                       <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: SOURCE_COLORS[s] }} />
-                      <span className="text-[13px] text-[#1A1A2E]" style={body}>{SOURCE_LABELS[s]}</span>
+                      <span className="text-[13px] text-[#1A1A2E] min-w-0" style={body}>{SOURCE_LABELS[s]}</span>
                       <span className="ml-auto lg:ml-1 text-[13px] font-semibold text-[#1A1A2E]" style={body}>{overview.enrollmentsBySource[s]}</span>
                     </div>
                   ))}
@@ -216,7 +219,39 @@ export function AdminDashboard() {
             {schools.length === 0 ? (
               <EmptyState icon={School} title="Школ пока нет" description="Когда первый автор зарегистрируется, его школа появится здесь." />
             ) : (
-              <Table>
+              <>
+              {/* Телефон: карточка на школу */}
+              <ul className="md:hidden divide-y divide-[#1A1A2E]/5">
+                {schools.map(s => (
+                  <li key={s.schoolId} className="py-3 first:pt-0 last:pb-0">
+                    {s.authors.length === 0 ? (
+                      <p className="text-[13px] text-[#8A8A9A]" style={body}>Автор не найден</p>
+                    ) : s.authors.map(a => (
+                      <div key={a.id} className="min-w-0 mb-1 last:mb-0">
+                        <p className="text-[14px] font-medium text-[#1A1A2E] truncate" style={body}>{a.name}</p>
+                        <p className="text-[12px] text-[#8A8A9A] truncate" style={body}>{a.email}</p>
+                      </div>
+                    ))}
+                    <p className="text-[12px] text-[#8A8A9A] mt-1.5" style={body}>
+                      <span className="font-semibold text-[#1A1A2E]">{pluralize(s.students, ['ученик', 'ученика', 'учеников'])}</span>
+                      {' · '}активность: {s.lastActivity ? formatDate(s.lastActivity) : 'нет'}
+                    </p>
+                    {s.courses.length === 0 ? (
+                      <p className="text-[13px] text-[#8A8A9A] mt-2" style={body}>Курсов нет</p>
+                    ) : (
+                      <ul className="mt-2 space-y-1.5">
+                        {s.courses.map(c => (
+                          <li key={c.id} className="flex items-start justify-between gap-2 rounded-lg border border-[#1A1A2E]/8 px-3 py-2">
+                            <span className="text-[13px] text-[#1A1A2E] min-w-0 break-words" style={body}>{c.title}</span>
+                            <Badge className={`${STATUS_STYLES[c.status].className} border-0 text-[12px] px-1.5 py-0 shrink-0`}>{STATUS_STYLES[c.status].label}</Badge>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </li>
+                ))}
+              </ul>
+              <Table className="hidden md:table">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Автор</TableHead>
@@ -234,7 +269,7 @@ export function AdminDashboard() {
                         ) : s.authors.map(a => (
                           <div key={a.id} className="mb-1 last:mb-0">
                             <p className="text-[13px] font-medium text-[#1A1A2E]" style={body}>{a.name}</p>
-                            <p className="text-[11px] text-[#8A8A9A] truncate max-w-[200px]" style={body}>{a.email}</p>
+                            <p className="text-[12px] text-[#8A8A9A] truncate max-w-[200px]" style={body}>{a.email}</p>
                           </div>
                         ))}
                       </TableCell>
@@ -246,7 +281,7 @@ export function AdminDashboard() {
                             {s.courses.map(c => (
                               <li key={c.id} className="flex flex-wrap items-center gap-1.5">
                                 <span className="text-[13px] text-[#1A1A2E]" style={body}>{c.title}</span>
-                                <Badge className={`${STATUS_STYLES[c.status].className} border-0 text-[10px] px-1.5 py-0`}>{STATUS_STYLES[c.status].label}</Badge>
+                                <Badge className={`${STATUS_STYLES[c.status].className} border-0 text-[12px] px-1.5 py-0`}>{STATUS_STYLES[c.status].label}</Badge>
                               </li>
                             ))}
                           </ul>
@@ -260,6 +295,7 @@ export function AdminDashboard() {
                   ))}
                 </TableBody>
               </Table>
+              </>
             )}
           </CardContent>
         </Card>
@@ -278,7 +314,23 @@ export function AdminDashboard() {
               <EmptyState icon={Users} title="Пользователей пока нет" />
             ) : (
               <>
-                <Table>
+                <ul className="sm:hidden divide-y divide-[#1A1A2E]/5">
+                  {visibleSignups.map(r => (
+                    <li key={r.user.id} className="py-2.5 flex items-start gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[14px] font-medium text-[#1A1A2E] truncate" style={body}>{r.user.name}</p>
+                        <p className="text-[12px] text-[#8A8A9A] truncate" style={body}>{r.user.email}</p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <Badge variant="outline" className="text-[12px] border-[#1A1A2E]/10 text-[#1A1A2E]/70">{ROLE_LABELS[r.user.role] ?? r.user.role}</Badge>
+                        <p className="text-[12px] text-[#8A8A9A] mt-1 whitespace-nowrap" style={body}>
+                          {r.courses ? `${pluralize(r.courses, ['курс', 'курса', 'курсов'])} · ${r.firstEnrollmentAt ? formatDate(r.firstEnrollmentAt) : '—'}` : 'нет записей'}
+                        </p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+                <Table className="hidden sm:table">
                   <TableHeader>
                     <TableRow>
                       <TableHead>Имя</TableHead>
@@ -292,11 +344,10 @@ export function AdminDashboard() {
                       <TableRow key={r.user.id}>
                         <TableCell>
                           <p className="text-[13px] font-medium text-[#1A1A2E] truncate max-w-[180px]" style={body}>{r.user.name}</p>
-                          <p className="text-[11px] text-[#8A8A9A] truncate max-w-[180px]" style={body}>{r.user.email}</p>
-                          <p className="sm:hidden text-[11px] text-[#7C6AF7]" style={body}>{ROLE_LABELS[r.user.role] ?? r.user.role}</p>
+                          <p className="text-[12px] text-[#8A8A9A] truncate max-w-[180px]" style={body}>{r.user.email}</p>
                         </TableCell>
                         <TableCell className="hidden sm:table-cell">
-                          <Badge variant="outline" className="text-[11px] border-[#1A1A2E]/10 text-[#1A1A2E]/70">{ROLE_LABELS[r.user.role] ?? r.user.role}</Badge>
+                          <Badge variant="outline" className="text-[12px] border-[#1A1A2E]/10 text-[#1A1A2E]/70">{ROLE_LABELS[r.user.role] ?? r.user.role}</Badge>
                         </TableCell>
                         <TableCell className="text-right text-[13px] text-[#1A1A2E]">{r.courses}</TableCell>
                         <TableCell className="text-right text-[13px] text-[#8A8A9A]" style={body}>
@@ -308,7 +359,7 @@ export function AdminDashboard() {
                 </Table>
                 {signups.length > SIGNUPS_PREVIEW && (
                   <div className="text-center mt-3">
-                    <Button variant="ghost" size="sm" className="text-[#7C6AF7]" onClick={() => setShowAllSignups(v => !v)}>
+                    <Button variant="ghost" size="sm" className="text-[#7C6AF7] h-10 sm:h-8" onClick={() => setShowAllSignups(v => !v)}>
                       {showAllSignups ? 'Свернуть' : `Показать всех (${signups.length})`}
                     </Button>
                   </div>

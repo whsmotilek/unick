@@ -4,8 +4,9 @@ import DOMPurify from 'dompurify';
 export function sanitizeHtml(html: string): string {
   return DOMPurify.sanitize(html, {
     ALLOWED_TAGS: ['p', 'br', 'strong', 'b', 'em', 'i', 'u', 's', 'a', 'ul', 'ol', 'li', 'h2', 'h3', 'h4',
-      'blockquote', 'code', 'pre', 'hr', 'img', 'span'],
-    ALLOWED_ATTR: ['href', 'target', 'rel', 'src', 'alt', 'title'],
+      'blockquote', 'code', 'pre', 'hr', 'img', 'span',
+      'table', 'thead', 'tbody', 'tr', 'th', 'td'],
+    ALLOWED_ATTR: ['href', 'target', 'rel', 'src', 'alt', 'title', 'colspan', 'rowspan'],
     ALLOWED_URI_REGEXP: /^(?:https?:|mailto:|data:image\/)/i,
   });
 }

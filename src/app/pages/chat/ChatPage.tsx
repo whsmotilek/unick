@@ -110,7 +110,7 @@ export function ChatPage() {
         <div className="p-4 border-b border-[#1A1A2E]/5">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-[18px] font-bold text-[#1A1A2E]" style={{ fontFamily: 'var(--font-heading)' }}>Чаты</h2>
-            <Button size="sm" onClick={() => setNewChatOpen(true)} className="transition-transform active:scale-[0.95]">
+            <Button size="sm" onClick={() => setNewChatOpen(true)} className="h-10 md:h-8 px-3 transition-transform active:scale-[0.95]">
               <Plus className="w-4 h-4 mr-1" />Новый
             </Button>
           </div>
@@ -133,29 +133,31 @@ export function ChatPage() {
             threads.map(t => (
               <button
                 key={t.withUserId}
+                type="button"
                 onClick={() => setActiveUserId(t.withUserId)}
-                className={`w-full p-4 flex items-center gap-3 hover:bg-[#F5F4F2] transition-colors text-left border-b border-[#1A1A2E]/5 ${
+                aria-current={activeUserId === t.withUserId ? 'true' : undefined}
+                className={`w-full px-4 py-3 md:py-4 min-h-[68px] flex items-center gap-3 hover:bg-[#F5F4F2] transition-colors text-left border-b border-[#1A1A2E]/5 ${
                   activeUserId === t.withUserId ? 'bg-[#EDE9FF]/50' : ''
                 }`}
               >
-                <Avatar className="w-10 h-10">
+                <Avatar className="w-10 h-10 shrink-0">
                   <AvatarImage src={t.withUserAvatar} />
                   <AvatarFallback className="bg-[#7C6AF7] text-white text-xs">
                     {t.withUserName.charAt(0)}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <p className="text-[13px] font-semibold text-[#1A1A2E] truncate" style={{ fontFamily: 'var(--font-body)' }}>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-[14px] md:text-[13px] font-semibold text-[#1A1A2E] truncate" style={{ fontFamily: 'var(--font-body)' }}>
                       {t.withUserName}
                     </p>
                     {t.unreadCount > 0 && (
-                      <span className="bg-[#7C6AF7] text-white text-[10px] font-semibold rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0">
+                      <span className="bg-[#7C6AF7] text-white text-[12px] leading-none font-semibold rounded-full min-w-5 h-5 px-1.5 flex items-center justify-center flex-shrink-0" aria-label={`Непрочитанных: ${t.unreadCount}`}>
                         {t.unreadCount}
                       </span>
                     )}
                   </div>
-                  <p className="text-[12px] text-[#8A8A9A] truncate" style={{ fontFamily: 'var(--font-body)' }}>
+                  <p className={`text-[13px] md:text-[12px] truncate ${t.unreadCount > 0 ? 'text-[#1A1A2E]/80' : 'text-[#8A8A9A]'}`} style={{ fontFamily: 'var(--font-body)' }}>
                     {t.lastMessage?.content || 'Нет сообщений'}
                   </p>
                 </div>
@@ -174,16 +176,16 @@ export function ChatPage() {
           </div>
         ) : (
           <>
-            <div className="bg-white border-b border-[#1A1A2E]/5 p-4 flex items-center gap-3">
+            <div className="bg-white border-b border-[#1A1A2E]/5 px-2 md:px-4 py-2 md:py-4 pt-[max(0.5rem,env(safe-area-inset-top))] md:pt-4 flex items-center gap-2 md:gap-3 shrink-0">
               <button
                 type="button"
                 onClick={() => setActiveUserId(null)}
                 aria-label="Назад к списку чатов"
-                className="md:hidden -ml-2 p-2 rounded-lg text-[#1A1A2E] hover:bg-[#F5F4F2] transition-colors"
+                className="md:hidden w-10 h-10 flex items-center justify-center shrink-0 rounded-lg text-[#1A1A2E] hover:bg-[#F5F4F2] transition-colors"
               >
                 <ArrowLeft className="w-5 h-5" />
               </button>
-              <Avatar className="w-9 h-9">
+              <Avatar className="w-9 h-9 shrink-0">
                 <AvatarImage src={userMap[activeUserId]?.avatar} />
                 <AvatarFallback className="bg-[#7C6AF7] text-white text-xs">
                   {userMap[activeUserId]?.name?.charAt(0) || '?'}
@@ -193,13 +195,13 @@ export function ChatPage() {
                 <p className="text-[14px] font-semibold text-[#1A1A2E] truncate" style={{ fontFamily: 'var(--font-heading)' }}>
                   {userMap[activeUserId]?.name || 'Пользователь'}
                 </p>
-                <p className="text-[11px] text-[#8A8A9A]" style={{ fontFamily: 'var(--font-body)' }}>
+                <p className="text-[12px] text-[#8A8A9A]" style={{ fontFamily: 'var(--font-body)' }}>
                   {userMap[activeUserId]?.role === 'author' ? 'Автор курса' : userMap[activeUserId]?.role === 'curator' ? 'Куратор' : userMap[activeUserId]?.role === 'student' ? 'Ученик' : ''}
                 </p>
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 py-4 md:p-4 space-y-2 md:space-y-3">
               <AnimatePresence initial={false}>
                 {messages.map((m) => {
                   const isMine = m.fromUserId === user?.id;
@@ -211,11 +213,11 @@ export function ChatPage() {
                       transition={{ duration: 0.2 }}
                       className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}
                     >
-                      <div className={`max-w-[85%] md:max-w-[70%] rounded-2xl px-4 py-2.5 ${
+                      <div className={`max-w-[85%] md:max-w-[70%] min-w-0 rounded-2xl px-3.5 md:px-4 py-2 md:py-2.5 ${
                         isMine ? 'bg-[#7C6AF7] text-white' : 'bg-white text-[#1A1A2E]'
                       }`}>
-                        <p className="text-[13px] whitespace-pre-wrap break-words" style={{ fontFamily: 'var(--font-body)' }}>{m.content}</p>
-                        <p className={`text-[10px] mt-1 ${isMine ? 'text-white/60' : 'text-[#8A8A9A]'}`} style={{ fontFamily: 'var(--font-body)' }}>
+                        <p className="text-[15px] md:text-[13px] leading-snug whitespace-pre-wrap break-words [overflow-wrap:anywhere]" style={{ fontFamily: 'var(--font-body)' }}>{m.content}</p>
+                        <p className={`text-[12px] md:text-[11px] mt-0.5 md:mt-1 text-right ${isMine ? 'text-white/70' : 'text-[#8A8A9A]'}`} style={{ fontFamily: 'var(--font-body)' }}>
                           {new Date(m.createdAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
                         </p>
                       </div>
@@ -226,16 +228,18 @@ export function ChatPage() {
               <div ref={messagesEndRef} />
             </div>
 
-            <div className="bg-white border-t border-[#1A1A2E]/5 p-3 md:p-4 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-              <div className="flex gap-2">
+            <div className="bg-white border-t border-[#1A1A2E]/5 shrink-0 px-3 md:px-4 pt-2 md:pt-4 pb-[max(0.5rem,env(safe-area-inset-bottom))] md:pb-4">
+              <div className="flex items-center gap-2">
                 <Input
                   placeholder="Введите сообщение..."
                   value={draft}
                   onChange={e => setDraft(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())}
-                  className="bg-[#F5F4F2] border-0"
+                  onKeyDown={e => e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing && (e.preventDefault(), handleSend())}
+                  enterKeyHint="send"
+                  aria-label="Сообщение"
+                  className="bg-[#F5F4F2] border-0 h-11 md:h-10 text-base md:text-sm"
                 />
-                <Button onClick={handleSend} disabled={!draft.trim()} aria-label="Отправить" className="transition-transform active:scale-[0.98]">
+                <Button onClick={handleSend} disabled={!draft.trim()} aria-label="Отправить" size="icon" className="h-11 w-11 md:h-10 md:w-10 shrink-0 transition-transform active:scale-[0.95]">
                   <Send className="w-4 h-4" />
                 </Button>
               </div>
@@ -245,35 +249,37 @@ export function ChatPage() {
       </main>
 
       <Dialog open={newChatOpen} onOpenChange={setNewChatOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
+        <DialogContent className="flex flex-col gap-3 p-4 max-sm:p-4 sm:p-6 w-[calc(100%-1rem)] max-w-[calc(100%-1rem)] sm:max-w-md max-h-[calc(100dvh-1rem)] sm:max-h-[80vh]">
+          <DialogHeader className="text-left pr-8">
             <DialogTitle>Новый чат</DialogTitle>
           </DialogHeader>
-          <div className="space-y-2 max-h-96 overflow-y-auto">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8A8A9A]" />
-              <Input
-                placeholder="Поиск..."
-                value={searchUser}
-                onChange={e => setSearchUser(e.target.value)}
-                className="pl-9 mb-2"
-              />
-            </div>
+          <div className="relative shrink-0">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8A8A9A]" />
+            <Input
+              placeholder="Поиск..."
+              value={searchUser}
+              onChange={e => setSearchUser(e.target.value)}
+              aria-label="Поиск контакта"
+              className="pl-9 h-11 sm:h-10 text-base sm:text-sm"
+            />
+          </div>
+          <div className="flex-1 min-h-0 -mx-2 px-2 space-y-1 overflow-y-auto overscroll-contain">
             {availableContacts
               .filter(u => !searchUser || u.name.toLowerCase().includes(searchUser.toLowerCase()))
               .map(u => (
                 <button
                   key={u.id}
+                  type="button"
                   onClick={() => startChat(u.id)}
-                  className="w-full p-3 flex items-center gap-3 rounded-xl hover:bg-[#F5F4F2] transition-colors text-left"
+                  className="w-full p-3 min-h-14 flex items-center gap-3 rounded-xl hover:bg-[#F5F4F2] active:bg-[#F5F4F2] transition-colors text-left"
                 >
-                  <Avatar className="w-9 h-9">
+                  <Avatar className="w-9 h-9 shrink-0">
                     <AvatarImage src={u.avatar} />
                     <AvatarFallback className="bg-[#7C6AF7] text-white text-xs">{u.name.charAt(0)}</AvatarFallback>
                   </Avatar>
-                  <div>
-                    <p className="text-[13px] font-semibold text-[#1A1A2E]" style={{ fontFamily: 'var(--font-body)' }}>{u.name}</p>
-                    <p className="text-[11px] text-[#8A8A9A]" style={{ fontFamily: 'var(--font-body)' }}>
+                  <div className="min-w-0">
+                    <p className="text-[14px] sm:text-[13px] font-semibold text-[#1A1A2E] truncate" style={{ fontFamily: 'var(--font-body)' }}>{u.name}</p>
+                    <p className="text-[12px] text-[#8A8A9A]" style={{ fontFamily: 'var(--font-body)' }}>
                       {u.role === 'author' ? 'Автор' : u.role === 'curator' ? 'Куратор' : u.role === 'student' ? 'Ученик' : u.role}
                     </p>
                   </div>

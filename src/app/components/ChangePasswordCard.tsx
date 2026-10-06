@@ -29,8 +29,8 @@ export function ChangePasswordCard() {
   };
 
   return (
-    <Card className="border-0 mt-6">
-      <CardContent className="p-6">
+    <Card className="border-0 mt-4 sm:mt-6">
+      <CardContent className="p-4 sm:p-6">
         <h2 className="text-[16px] font-semibold text-[#1A1A2E] mb-4 flex items-center gap-2" style={{ fontFamily: 'var(--font-heading)' }}>
           <KeyRound className="w-4 h-4 text-[#7C6AF7]" />Сменить пароль
         </h2>
@@ -38,14 +38,14 @@ export function ChangePasswordCard() {
           <div>
             <Label htmlFor="new-password">Новый пароль</Label>
             <Input id="new-password" type="password" autoComplete="new-password" value={password}
-              onChange={e => setPassword(e.target.value)} placeholder="Минимум 8 символов" className="mt-1.5" />
+              onChange={e => setPassword(e.target.value)} placeholder="Минимум 8 символов" className="mt-1.5 h-11 sm:h-10 text-base sm:text-sm" />
           </div>
           <div>
             <Label htmlFor="repeat-password">Ещё раз</Label>
             <Input id="repeat-password" type="password" autoComplete="new-password" value={repeat}
-              onChange={e => setRepeat(e.target.value)} className="mt-1.5" />
+              onChange={e => setRepeat(e.target.value)} className="mt-1.5 h-11 sm:h-10 text-base sm:text-sm" />
           </div>
-          <Button type="submit" disabled={busy || !password}>{busy ? 'Сохранение…' : 'Сменить'}</Button>
+          <Button type="submit" disabled={busy || !password} className="w-full sm:w-auto h-11 sm:h-10">{busy ? 'Сохранение…' : 'Сменить'}</Button>
         </form>
       </CardContent>
     </Card>

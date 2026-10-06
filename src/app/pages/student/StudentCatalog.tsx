@@ -49,9 +49,9 @@ export function StudentCatalog() {
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-[28px] font-bold text-[#1A1A2E]" style={{ fontFamily: 'var(--font-heading)' }}>Каталог курсов</h1>
+        <h1 className="text-[24px] sm:text-[28px] leading-tight font-bold text-[#1A1A2E] mb-1" style={{ fontFamily: 'var(--font-heading)' }}>Каталог курсов</h1>
         <p className="text-[13px] text-[#8A8A9A]" style={{ fontFamily: 'var(--font-body)' }}>Найдите курс по душе и начните учиться</p>
       </div>
 
@@ -62,7 +62,7 @@ export function StudentCatalog() {
             placeholder="Поиск курсов..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 bg-white border-[#1A1A2E]/10"
+            className="pl-9 h-11 sm:h-10 text-base sm:text-sm bg-white border-[#1A1A2E]/10"
           />
         </div>
       </div>
@@ -76,7 +76,7 @@ export function StudentCatalog() {
             : 'Открытых курсов пока нет. Если автор прислал вам ссылку-приглашение — откройте её'}
         />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {filtered.map((course, i) => {
             const isEnrolled = enrolledIds.includes(course.id);
             // До записи уроки не видны (права доступа), поэтому показываем число модулей
@@ -88,7 +88,7 @@ export function StudentCatalog() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3, delay: i * 0.05 }}
               >
-                <Card className="border-0 overflow-hidden hover:shadow-[0_8px_30px_rgba(0,0,0,0.1)] transition-all hover:-translate-y-1 duration-300 h-full">
+                <Card className="border-0 overflow-hidden hover:shadow-[0_8px_30px_rgba(0,0,0,0.1)] transition-all hover:-translate-y-1 duration-300 h-full gap-0">
                   <div className="relative aspect-video bg-[#F5F4F2] overflow-hidden">
                     {isEnrolled && (
                       <Badge variant="success" className="absolute top-3 left-3 z-10">
@@ -103,11 +103,11 @@ export function StudentCatalog() {
                       </div>
                     )}
                   </div>
-                  <CardContent className="p-5 flex flex-col h-[200px]">
+                  <CardContent className="p-5 flex flex-col sm:h-[200px]">
                     <h3 className="text-[16px] font-semibold text-[#1A1A2E] mb-2 line-clamp-2 break-words [overflow-wrap:anywhere]" style={{ fontFamily: 'var(--font-heading)' }}>
                       {course.title}
                     </h3>
-                    <p className="text-[12px] text-[#8A8A9A] mb-4 line-clamp-2 flex-1" style={{ fontFamily: 'var(--font-body)' }}>
+                    <p className="text-[13px] text-[#8A8A9A] mb-4 line-clamp-2 flex-1" style={{ fontFamily: 'var(--font-body)' }}>
                       {course.description}
                     </p>
                     <div className="flex items-center justify-between text-[12px] text-[#8A8A9A] mb-3" style={{ fontFamily: 'var(--font-body)' }}>
@@ -115,11 +115,11 @@ export function StudentCatalog() {
                       {course.accessType === 'paid' && course.price ? <span className="font-semibold text-[#1A1A2E]">{course.price.toLocaleString('ru-RU')} ₽</span> : null}
                     </div>
                     {isEnrolled ? (
-                      <Button variant="outline" onClick={() => navigate(`/student/courses/${course.id}`)} className="w-full">
+                      <Button variant="outline" onClick={() => navigate(`/student/courses/${course.id}`)} className="w-full h-11 sm:h-10">
                         <CheckCircle2 className="w-4 h-4 mr-2 text-[#2D5016]" />Перейти к курсу
                       </Button>
                     ) : course.accessType === 'free' ? (
-                      <Button onClick={() => handleEnroll(course.id)} disabled={busyId === course.id} className="w-full transition-transform active:scale-[0.98]">
+                      <Button onClick={() => handleEnroll(course.id)} disabled={busyId === course.id} className="w-full h-11 sm:h-10 transition-transform active:scale-[0.98]">
                         {busyId === course.id ? 'Запись...' : 'Записаться бесплатно'}<ArrowRight className="w-4 h-4 ml-2" />
                       </Button>
                     ) : (

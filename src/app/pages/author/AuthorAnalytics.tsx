@@ -99,7 +99,7 @@ export function AuthorAnalytics() {
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-6">
         <PageHeader />
         <Select value={selected} onValueChange={setSelected}>
-          <SelectTrigger className="w-full sm:w-72 bg-white" aria-label="Курс">
+          <SelectTrigger className="w-full sm:w-72 h-11 sm:h-10 bg-white min-w-0" aria-label="Курс">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -116,7 +116,7 @@ export function AuthorAnalytics() {
               <s.icon className={`w-5 h-5 ${s.text} mb-3`} strokeWidth={1.5} />
               <p className={`text-[22px] sm:text-[26px] leading-tight font-bold ${s.text}`} style={heading}>{s.value}</p>
               <p className="text-[12px] font-medium text-[#1A1A2E] mt-1" style={body}>{s.label}</p>
-              <p className="text-[11px] text-[#1A1A2E]/55" style={body}>{s.hint}</p>
+              <p className="text-[12px] leading-snug text-[#1A1A2E]/55" style={body}>{s.hint}</p>
             </CardContent>
           </Card>
         ))}
@@ -128,7 +128,7 @@ export function AuthorAnalytics() {
           <div className="flex flex-wrap items-baseline justify-between gap-2 mb-1">
             <h3 className="text-[16px] font-semibold text-[#1A1A2E]" style={heading}>Где отваливаются ученики</h3>
             {funnel && funnel.enrolled > 0 && (
-              <span className="text-[12px] text-[#8A8A9A]" style={body}>
+              <span className="text-[12px] text-[#8A8A9A] min-w-0 break-words" style={body}>
                 {funnelCourse!.title} · {pluralize(funnel.enrolled, ['ученик', 'ученика', 'учеников'])}
               </span>
             )}
@@ -156,11 +156,11 @@ export function AuthorAnalytics() {
                   Резких падений между уроками нет.
                 </p>
               )}
-              <ResponsiveContainer width="100%" height={260}>
-                <BarChart data={funnel.steps} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
+              <ResponsiveContainer width="100%" height={240}>
+                <BarChart data={funnel.steps} margin={{ top: 8, right: 4, left: 0, bottom: 0 }}>
                   <CartesianGrid vertical={false} stroke="#EEE" />
-                  <XAxis dataKey="position" tick={{ fontSize: 12, fill: '#8A8A9A' }} tickLine={false} axisLine={false} />
-                  <YAxis domain={[0, 100]} tickFormatter={v => `${v}%`} tick={{ fontSize: 12, fill: '#8A8A9A' }} tickLine={false} axisLine={false} />
+                  <XAxis dataKey="position" tick={{ fontSize: 12, fill: '#8A8A9A' }} tickLine={false} axisLine={false} interval="preserveStartEnd" minTickGap={4} />
+                  <YAxis domain={[0, 100]} ticks={[0, 50, 100]} tickFormatter={v => `${v}%`} tick={{ fontSize: 12, fill: '#8A8A9A' }} tickLine={false} axisLine={false} width={40} />
                   <Tooltip
                     cursor={{ fill: '#F5F4F2' }}
                     content={({ active, payload }) => {
@@ -182,7 +182,7 @@ export function AuthorAnalytics() {
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
-              <p className="text-[11px] text-[#8A8A9A] mt-2" style={body}>По горизонтали — номер урока в курсе. Наведите на столбец, чтобы увидеть название.</p>
+              <p className="text-[12px] text-[#8A8A9A] mt-2" style={body}>По горизонтали — номер урока в курсе. Наведите или нажмите на столбец, чтобы увидеть название.</p>
             </>
           )}
         </CardContent>
@@ -200,10 +200,10 @@ export function AuthorAnalytics() {
           {activityTotal === 0 ? (
             <EmptyState icon={Activity} title="За последние 4 недели уроков не проходили" description="Как только ученики начнут отмечать уроки, здесь появится график по дням." />
           ) : (
-            <ResponsiveContainer width="100%" height={240}>
+            <ResponsiveContainer width="100%" height={220}>
               <BarChart data={activity} margin={{ top: 8, right: 8, left: -24, bottom: 0 }}>
                 <CartesianGrid vertical={false} stroke="#EEE" />
-                <XAxis dataKey="date" tickFormatter={formatDay} tick={{ fontSize: 11, fill: '#8A8A9A' }} tickLine={false} axisLine={false} interval="preserveStartEnd" minTickGap={16} />
+                <XAxis dataKey="date" tickFormatter={formatDay} tick={{ fontSize: 12, fill: '#8A8A9A' }} tickLine={false} axisLine={false} interval="preserveStartEnd" minTickGap={24} />
                 <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: '#8A8A9A' }} tickLine={false} axisLine={false} />
                 <Tooltip
                   cursor={{ fill: '#F5F4F2' }}
@@ -225,7 +225,39 @@ export function AuthorAnalytics() {
           {atRisk.length === 0 ? (
             <EmptyState icon={Users} title="Все ученики на связи" description="Никто не пропадал дольше недели. Отличная работа!" />
           ) : (
-            <Table>
+            <>
+            {/* Телефон и планшет: карточки вместо таблицы */}
+            <ul className="lg:hidden divide-y divide-[#1A1A2E]/5 -mx-1">
+              {atRisk.map(r => {
+                const u = getUser(r.userId);
+                return (
+                  <li key={`${r.userId}|${r.courseId}`} className="flex items-start gap-3 px-1 py-3">
+                    <Avatar className="w-9 h-9 shrink-0">
+                      <AvatarImage src={u?.avatar} />
+                      <AvatarFallback className="bg-[#EDE9FF] text-[#7C6AF7] text-xs">{u?.name?.charAt(0) ?? '?'}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[14px] font-medium text-[#1A1A2E] truncate" style={body}>{u?.name ?? 'Ученик'}</p>
+                      {selected === ALL && <p className="text-[12px] text-[#8A8A9A] truncate" style={body}>{courseTitle(r.courseId)}</p>}
+                      <p className="text-[12px] mt-0.5" style={body}>
+                        <span className="text-[#C2410C]">{pluralize(r.daysInactive, ['день', 'дня', 'дней'])} без активности</span>
+                        <span className="text-[#8A8A9A]"> · {r.lastActivity ? formatDate(r.lastActivity) : 'не начинал'}</span>
+                      </p>
+                      <div className="flex items-center gap-2 mt-1.5">
+                        <Progress value={r.progress} className="h-1.5 flex-1" aria-label="Прогресс" />
+                        <span className="text-[12px] text-[#8A8A9A] w-9 text-right">{r.progress}%</span>
+                      </div>
+                    </div>
+                    <Button asChild variant="ghost" size="icon" className="text-[#7C6AF7] shrink-0 -mr-1">
+                      <Link to={`/author/chat?with=${encodeURIComponent(r.userId)}`} aria-label={`Написать: ${u?.name ?? 'ученику'}`}>
+                        <MessageSquare className="w-5 h-5" />
+                      </Link>
+                    </Button>
+                  </li>
+                );
+              })}
+            </ul>
+            <Table className="hidden lg:table">
               <TableHeader>
                 <TableRow>
                   <TableHead>Ученик</TableHead>
@@ -280,6 +312,7 @@ export function AuthorAnalytics() {
                 })}
               </TableBody>
             </Table>
+            </>
           )}
         </CardContent>
       </Card>
@@ -290,7 +323,7 @@ export function AuthorAnalytics() {
 function PageHeader() {
   return (
     <div>
-      <h1 className="text-[28px] font-bold text-[#1A1A2E]" style={heading}>Аналитика</h1>
+      <h1 className="text-[24px] sm:text-[28px] leading-tight font-bold text-[#1A1A2E] mb-1" style={heading}>Аналитика</h1>
       <p className="text-[13px] text-[#8A8A9A]" style={body}>Как ученики проходят ваши курсы — по реальным данным</p>
     </div>
   );

@@ -51,12 +51,12 @@ export function Landing() {
     <div className="min-h-screen bg-[#F5F4F2]">
       {/* Navigation */}
       <nav className="bg-[#1A1A2E] border-b border-white/10 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
+          <div className="flex items-center justify-between gap-2">
             <Link to="/" className="flex items-center">
-              <img src={logoWhiteFull} alt="Unick" className="h-6" />
+              <img src={logoWhiteFull} alt="Unick" className="h-5 sm:h-6" />
             </Link>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1 sm:gap-3">
               {isAuthenticated ? (
                 <Link to={dashboardLink}>
                   <Button className="bg-white text-[#1A1A2E] hover:bg-white/90 transition-transform active:scale-[0.98]">
@@ -66,7 +66,7 @@ export function Landing() {
               ) : (
                 <>
                   <Link to="/login">
-                    <Button variant="ghost" className="text-white hover:bg-white/10 transition-colors">
+                    <Button variant="ghost" className="text-white hover:bg-white/10 transition-colors px-3 sm:px-5">
                       Войти
                     </Button>
                   </Link>
@@ -84,10 +84,10 @@ export function Landing() {
 
       {/* Hero Section */}
       <section className="relative overflow-hidden">
-        <div className="max-w-7xl mx-auto px-6 py-24">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-12 pb-16 sm:py-24">
           <div className="text-center max-w-4xl mx-auto">
             <motion.div {...fadeUp} transition={{ duration: 0.5 }}>
-              <Badge variant="default" className="mb-6 px-4 py-2">
+              <Badge variant="default" className="mb-5 sm:mb-6 px-4 py-2">
                 <Sparkles className="w-3.5 h-3.5 mr-1.5" />
                 Пилотный запуск
               </Badge>
@@ -96,18 +96,18 @@ export function Landing() {
             <motion.h1
               {...fadeUp}
               transition={{ duration: 0.6, delay: 0.1 }}
-              className="text-[48px] md:text-[56px] font-bold text-[#1A1A2E] mb-6 leading-tight"
+              className="text-[34px] sm:text-[48px] md:text-[56px] font-bold text-[#1A1A2E] mb-5 sm:mb-6 leading-[1.12] sm:leading-tight max-sm:tracking-[-0.01em] max-sm:text-balance"
               style={{ fontFamily: 'var(--font-heading)' }}
             >
               Создайте курс и ведите учеников
-              <br />
+              <br className="hidden sm:block" />{' '}
               <span className="text-[#7C6AF7]">в одном месте</span>
             </motion.h1>
 
             <motion.p
               {...fadeUp}
               transition={{ duration: 0.6, delay: 0.2 }}
-              className="text-[16px] md:text-[18px] text-[#8A8A9A] mb-10 max-w-2xl mx-auto leading-relaxed"
+              className="text-[16px] md:text-[18px] text-[#8A8A9A] mb-8 sm:mb-10 max-w-2xl mx-auto leading-relaxed"
               style={{ fontFamily: 'var(--font-body)' }}
             >
               Соберите курс из видео, текстов, тестов и домашних заданий, пригласите учеников по ссылке
@@ -117,17 +117,17 @@ export function Landing() {
             <motion.div
               {...fadeUp}
               transition={{ duration: 0.6, delay: 0.3 }}
-              className="flex flex-wrap gap-4 justify-center"
+              className="flex flex-col sm:flex-row sm:flex-wrap gap-3 sm:gap-4 justify-center max-w-sm sm:max-w-none mx-auto"
             >
-              <Link to="/register">
-                <Button size="lg" className="text-base px-8 transition-transform hover:scale-[1.02] active:scale-[0.98]">
+              <Link to="/register" className="w-full sm:w-auto">
+                <Button size="lg" className="w-full sm:w-auto text-base px-8 transition-transform hover:scale-[1.02] active:scale-[0.98]">
                   Создать курс
                   <ArrowRight className="w-5 h-5 ml-2" />
                 </Button>
               </Link>
               {isDemoMode && (
-                <Link to="/login">
-                  <Button size="lg" variant="outline" className="text-base px-8 transition-transform hover:scale-[1.02] active:scale-[0.98]">
+                <Link to="/login" className="w-full sm:w-auto">
+                  <Button size="lg" variant="outline" className="w-full sm:w-auto text-base px-8 transition-transform hover:scale-[1.02] active:scale-[0.98]">
                     Демо-вход
                   </Button>
                 </Link>
@@ -135,7 +135,7 @@ export function Landing() {
               <Button
                 size="lg"
                 onClick={openWaitlist}
-                className="text-base px-8 bg-gradient-to-br from-[#7C6AF7] to-[#9B8AF9] text-white hover:from-[#6B59E5] hover:to-[#8A79E7] shadow-[0_8px_24px_rgba(124,106,247,0.35)] hover:shadow-[0_12px_30px_rgba(124,106,247,0.45)] transition-all hover:scale-[1.02] active:scale-[0.98]"
+                className="w-full sm:w-auto text-base px-8 bg-gradient-to-br from-[#7C6AF7] to-[#9B8AF9] text-white hover:from-[#6B59E5] hover:to-[#8A79E7] shadow-[0_8px_24px_rgba(124,106,247,0.35)] hover:shadow-[0_12px_30px_rgba(124,106,247,0.45)] transition-all hover:scale-[1.02] active:scale-[0.98]"
               >
                 <Sparkles className="w-5 h-5 mr-2" />
                 Предзапись
@@ -145,12 +145,12 @@ export function Landing() {
             <motion.div
               {...fadeUp}
               transition={{ duration: 0.6, delay: 0.4 }}
-              className="mt-12 flex flex-wrap items-center justify-center gap-6 md:gap-8 text-sm text-[#8A8A9A]"
+              className="mt-10 sm:mt-12 flex flex-col sm:flex-row sm:flex-wrap items-center justify-center gap-2.5 sm:gap-6 md:gap-8 text-sm text-[#8A8A9A]"
               style={{ fontFamily: 'var(--font-body)' }}
             >
               {['Курс собирается за час', 'Работает с телефона', 'Помогаем запустить первый курс'].map((text) => (
                 <div key={text} className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-[#C5E8A0]" />
+                  <Check className="w-4 h-4 text-[#7FB850] shrink-0" />
                   <span>{text}</span>
                 </div>
               ))}
@@ -164,10 +164,10 @@ export function Landing() {
       </section>
 
       {/* Features Grid */}
-      <section className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-6">
-          <motion.div {...fadeUp} transition={{ duration: 0.5 }} className="text-center mb-16">
-            <h2 className="text-[32px] md:text-[40px] font-bold text-[#1A1A2E] mb-4" style={{ fontFamily: 'var(--font-heading)' }}>
+      <section className="py-14 sm:py-20 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <motion.div {...fadeUp} transition={{ duration: 0.5 }} className="text-center mb-8 sm:mb-16">
+            <h2 className="text-[28px] sm:text-[32px] md:text-[40px] leading-tight font-bold text-[#1A1A2E] mb-3 sm:mb-4" style={{ fontFamily: 'var(--font-heading)' }}>
               Что уже умеет Unick
             </h2>
             <p className="text-[16px] text-[#8A8A9A]" style={{ fontFamily: 'var(--font-body)' }}>
@@ -175,7 +175,7 @@ export function Landing() {
             </p>
           </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
             {features.map((feature, index) => (
               <motion.div
                 key={index}
@@ -183,14 +183,14 @@ export function Landing() {
                 transition={{ duration: 0.4, delay: index * 0.08 }}
               >
                 <Card className={`${feature.color} border-0 hover:shadow-[0_8px_30px_rgba(0,0,0,0.12)] transition-all duration-300 hover:-translate-y-1 cursor-default`}>
-                  <CardContent className="p-6">
-                    <div className="w-14 h-14 rounded-2xl bg-white/50 flex items-center justify-center mb-4">
-                      <feature.icon className={`w-7 h-7 ${feature.iconColor}`} strokeWidth={1.5} />
+                  <CardContent className="p-5 sm:p-6">
+                    <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-white/50 flex items-center justify-center mb-3 sm:mb-4">
+                      <feature.icon className={`w-6 h-6 sm:w-7 sm:h-7 ${feature.iconColor}`} strokeWidth={1.5} />
                     </div>
                     <h3 className="text-[18px] font-semibold text-[#1A1A2E] mb-2" style={{ fontFamily: 'var(--font-heading)' }}>
                       {feature.title}
                     </h3>
-                    <p className="text-[13px] text-[#1A1A2E]/70 leading-relaxed" style={{ fontFamily: 'var(--font-body)' }}>
+                    <p className="text-[14px] sm:text-[13px] text-[#1A1A2E]/75 leading-relaxed" style={{ fontFamily: 'var(--font-body)' }}>
                       {feature.description}
                     </p>
                   </CardContent>
@@ -202,21 +202,21 @@ export function Landing() {
       </section>
 
       {/* How it works */}
-      <section className="py-20 bg-[#F5F4F2]">
-        <div className="max-w-7xl mx-auto px-6">
-          <motion.div {...fadeUp} transition={{ duration: 0.5 }} className="text-center mb-16">
-            <h2 className="text-[32px] md:text-[40px] font-bold text-[#1A1A2E] mb-4" style={{ fontFamily: 'var(--font-heading)' }}>
+      <section className="py-14 sm:py-20 bg-[#F5F4F2]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <motion.div {...fadeUp} transition={{ duration: 0.5 }} className="text-center mb-8 sm:mb-16">
+            <h2 className="text-[28px] sm:text-[32px] md:text-[40px] leading-tight font-bold text-[#1A1A2E] mb-3 sm:mb-4" style={{ fontFamily: 'var(--font-heading)' }}>
               Как это работает
             </h2>
           </motion.div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-6">
             {steps.map((step, index) => (
               <motion.div key={step.title} {...fadeUp} transition={{ duration: 0.4, delay: index * 0.1 }}>
                 <Card className="border-0 h-full">
-                  <CardContent className="p-6">
+                  <CardContent className="p-5 sm:p-6">
                     <span className="w-10 h-10 rounded-xl bg-[#7C6AF7] text-white font-bold flex items-center justify-center mb-4" style={{ fontFamily: 'var(--font-heading)' }}>{index + 1}</span>
                     <h3 className="text-[18px] font-semibold text-[#1A1A2E] mb-2" style={{ fontFamily: 'var(--font-heading)' }}>{step.title}</h3>
-                    <p className="text-[13px] text-[#1A1A2E]/70 leading-relaxed" style={{ fontFamily: 'var(--font-body)' }}>{step.text}</p>
+                    <p className="text-[14px] sm:text-[13px] text-[#1A1A2E]/75 leading-relaxed" style={{ fontFamily: 'var(--font-body)' }}>{step.text}</p>
                   </CardContent>
                 </Card>
               </motion.div>
@@ -226,25 +226,25 @@ export function Landing() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 bg-[#F5F4F2]">
-        <div className="max-w-4xl mx-auto px-6 text-center">
+      <section className="pt-0 pb-14 sm:py-20 bg-[#F5F4F2]">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
           <motion.div {...fadeUp} transition={{ duration: 0.6 }}>
             <Card className="bg-gradient-to-br from-[#1A1A2E] to-[#2A2A3E] border-0 text-white overflow-hidden relative">
-              <CardContent className="p-12 relative z-10">
-                <h2 className="text-[32px] md:text-[40px] font-bold mb-4" style={{ fontFamily: 'var(--font-heading)' }}>
+              <CardContent className="px-5 py-8 sm:p-12 relative z-10">
+                <h2 className="text-[26px] sm:text-[32px] md:text-[40px] leading-tight font-bold mb-3 sm:mb-4 text-balance" style={{ fontFamily: 'var(--font-heading)' }}>
                   Запустим ваш первый курс вместе
                 </h2>
-                <p className="text-[16px] text-white/80 mb-8 max-w-2xl mx-auto" style={{ fontFamily: 'var(--font-body)' }}>
+                <p className="text-[15px] sm:text-[16px] leading-relaxed text-white/80 mb-6 sm:mb-8 max-w-2xl mx-auto" style={{ fontFamily: 'var(--font-body)' }}>
                   Мы в пилотном режиме и лично помогаем первым авторам: переносим материалы, настраиваем курс, собираем обратную связь
                 </p>
-                <div className="flex flex-wrap gap-3 justify-center">
-                  <Link to="/register?role=author">
-                    <Button size="lg" className="bg-white text-[#1A1A2E] hover:bg-white/90 text-base px-8 transition-transform hover:scale-[1.02] active:scale-[0.98]">
+                <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3 justify-center">
+                  <Link to="/register?role=author" className="w-full sm:w-auto">
+                    <Button size="lg" className="w-full sm:w-auto bg-white text-[#1A1A2E] hover:bg-white/90 text-base px-8 transition-transform hover:scale-[1.02] active:scale-[0.98]">
                       Создать курс
                       <ArrowRight className="w-5 h-5 ml-2" />
                     </Button>
                   </Link>
-                  <Button size="lg" variant="outline" onClick={openWaitlist} className="bg-transparent text-white border-white/30 hover:bg-white/10 text-base px-8">
+                  <Button size="lg" variant="outline" onClick={openWaitlist} className="w-full sm:w-auto bg-transparent text-white border-white/30 hover:bg-white/10 text-base px-8">
                     Оставить заявку на пилот
                   </Button>
                 </div>
@@ -257,16 +257,16 @@ export function Landing() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-[#1A1A2E] border-t border-white/10 py-12">
-        <div className="max-w-7xl mx-auto px-6">
+      <footer className="bg-[#1A1A2E] border-t border-white/10 pt-10 pb-28 md:py-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="flex flex-col md:flex-row items-center justify-between">
             <div className="flex items-center mb-4 md:mb-0">
               <img src={logoWhiteFull} alt="Unick" className="h-5" />
             </div>
-            <div className="flex flex-col md:flex-row items-center gap-3 md:gap-6 text-white/50 text-sm" style={{ fontFamily: 'var(--font-body)' }}>
-              <Link to="/legal/privacy" className="hover:text-white">Политика обработки персональных данных</Link>
-              <Link to="/legal/terms" className="hover:text-white">Условия использования</Link>
-              <span>© 2026 Unick</span>
+            <div className="flex flex-col md:flex-row items-center gap-1 md:gap-6 text-white/60 text-sm text-center" style={{ fontFamily: 'var(--font-body)' }}>
+              <Link to="/legal/privacy" className="hover:text-white inline-flex items-center min-h-10 px-2">Политика обработки персональных данных</Link>
+              <Link to="/legal/terms" className="hover:text-white inline-flex items-center min-h-10 px-2">Условия использования</Link>
+              <span className="mt-2 md:mt-0">© 2026 Unick</span>
             </div>
           </div>
         </div>

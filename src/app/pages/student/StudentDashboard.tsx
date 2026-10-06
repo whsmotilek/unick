@@ -107,9 +107,9 @@ export function StudentDashboard() {
   ];
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-[28px] font-bold text-[#1A1A2E] mb-1" style={{ fontFamily: 'var(--font-heading)' }}>
+        <h1 className="text-[24px] sm:text-[28px] leading-tight font-bold text-[#1A1A2E] mb-1" style={{ fontFamily: 'var(--font-heading)' }}>
           Привет, {user?.name?.split(' ')[0] || 'Ученик'}! 👋
         </h1>
         <p className="text-[13px] text-[#8A8A9A]" style={{ fontFamily: 'var(--font-body)' }}>
@@ -118,19 +118,19 @@ export function StudentDashboard() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
         {stats.map((s, i) => (
           <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
             <Card className={`${s.color} border-0`}>
-              <CardContent className="p-5">
-                <div className="flex items-start justify-between mb-3">
+              <CardContent className="p-4 sm:p-5">
+                <div className="flex items-start justify-between mb-2 sm:mb-3">
                   <s.icon className={`w-5 h-5 ${s.text}`} strokeWidth={1.5} />
-                  {completedCourses > 0 && i === 0 && <Badge variant="success" className="text-[10px]">{completedCourses} ✓</Badge>}
+                  {completedCourses > 0 && i === 0 && <Badge variant="success" className="text-[12px]">{completedCourses} ✓</Badge>}
                 </div>
-                <p className={`text-[28px] font-bold ${s.text}`} style={{ fontFamily: 'var(--font-heading)' }}>
+                <p className={`text-[24px] sm:text-[28px] leading-tight font-bold ${s.text}`} style={{ fontFamily: 'var(--font-heading)' }}>
                   <CountUp value={s.value} suffix={s.suffix} />
                 </p>
-                <p className="text-[11px] text-[#1A1A2E]/60 mt-1" style={{ fontFamily: 'var(--font-body)' }}>{s.label}</p>
+                <p className="text-[12px] text-[#1A1A2E]/60 mt-1 leading-snug" style={{ fontFamily: 'var(--font-body)' }}>{s.label}</p>
               </CardContent>
             </Card>
           </motion.div>
@@ -142,7 +142,7 @@ export function StudentDashboard() {
         <div className="lg:col-span-2">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-[18px] font-bold text-[#1A1A2E]" style={{ fontFamily: 'var(--font-heading)' }}>Мои курсы</h2>
-            <Link to="/student/courses" className="text-[13px] text-[#7C6AF7] hover:underline" style={{ fontFamily: 'var(--font-body)' }}>
+            <Link to="/student/courses" className="text-[13px] text-[#7C6AF7] hover:underline inline-flex items-center min-h-10 -my-2 px-1" style={{ fontFamily: 'var(--font-body)' }}>
               Все курсы →
             </Link>
           </div>
@@ -167,22 +167,22 @@ export function StudentDashboard() {
                 const next = getNextLesson(c);
                 return (
                   <Card key={c.id} className="border-0 hover:shadow-[0_4px_20px_rgba(0,0,0,0.08)] transition-all">
-                    <CardContent className="p-4 flex items-center gap-4">
-                      <div className="w-16 h-16 rounded-xl bg-[#F5F4F2] overflow-hidden flex-shrink-0">
+                    <CardContent className="p-4 [&:last-child]:pb-4 flex flex-wrap sm:flex-nowrap items-center gap-3 sm:gap-4">
+                      <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-[#F5F4F2] overflow-hidden flex-shrink-0">
                         {c.cover ? <img src={c.cover} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center"><BookOpen className="w-6 h-6 text-[#8A8A9A]" /></div>}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h3 className="text-[14px] font-semibold text-[#1A1A2E] mb-2 line-clamp-1" style={{ fontFamily: 'var(--font-heading)' }}>
+                        <h3 className="text-[14px] font-semibold text-[#1A1A2E] mb-2 line-clamp-2 sm:line-clamp-1" style={{ fontFamily: 'var(--font-heading)' }}>
                           {c.title}
                         </h3>
                         <div className="flex items-center gap-2">
                           <Progress value={c.progressPct} className="h-1.5 flex-1" />
-                          <span className="text-[11px] font-semibold text-[#1A1A2E]" style={{ fontFamily: 'var(--font-body)' }}>{c.progressPct}%</span>
+                          <span className="text-[12px] font-semibold text-[#1A1A2E]" style={{ fontFamily: 'var(--font-body)' }}>{c.progressPct}%</span>
                         </div>
                       </div>
                       {next && (
-                        <Link to={`/student/courses/${c.id}/lesson/${next.id}`}>
-                          <Button size="sm" className="transition-transform active:scale-[0.98]">
+                        <Link to={`/student/courses/${c.id}/lesson/${next.id}`} className="w-full sm:w-auto">
+                          <Button size="sm" className="w-full sm:w-auto h-10 sm:h-9 transition-transform active:scale-[0.98]">
                             <Play className="w-3 h-3 mr-1" />Продолжить
                           </Button>
                         </Link>
@@ -199,7 +199,7 @@ export function StudentDashboard() {
         <div>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-[18px] font-bold text-[#1A1A2E]" style={{ fontFamily: 'var(--font-heading)' }}>Задания</h2>
-            <Link to="/student/homework" className="text-[13px] text-[#7C6AF7] hover:underline" style={{ fontFamily: 'var(--font-body)' }}>
+            <Link to="/student/homework" className="text-[13px] text-[#7C6AF7] hover:underline inline-flex items-center min-h-10 -my-2 px-1" style={{ fontFamily: 'var(--font-body)' }}>
               Все →
             </Link>
           </div>
@@ -219,16 +219,16 @@ export function StudentDashboard() {
                   <Link key={task.lessonId} to={`/student/courses/${task.courseId}/lesson/${task.lessonId}`} className="block">
                     <Card className="border-0 hover:shadow-[0_4px_20px_rgba(0,0,0,0.08)] transition-all">
                       <CardContent className="p-4">
-                        <p className="text-[11px] text-[#8A8A9A] mb-1" style={{ fontFamily: 'var(--font-body)' }}>
+                        <p className="text-[12px] text-[#8A8A9A] mb-1" style={{ fontFamily: 'var(--font-body)' }}>
                           {task.courseTitle}
                         </p>
                         <p className="text-[13px] font-semibold text-[#1A1A2E] mb-2" style={{ fontFamily: 'var(--font-body)' }}>
                           {task.lessonTitle}
                         </p>
                         <div className="flex flex-wrap gap-1.5">
-                          {task.returned && <Badge variant="warning" className="text-[10px]">На доработку</Badge>}
+                          {task.returned && <Badge variant="warning" className="text-[12px]">На доработку</Badge>}
                           {days !== null && (
-                            <Badge variant={days < 3 ? 'destructive' : days < 7 ? 'warning' : 'secondary'} className="text-[10px]">
+                            <Badge variant={days < 3 ? 'destructive' : days < 7 ? 'warning' : 'secondary'} className="text-[12px]">
                               {days < 0 ? 'Просрочено' : days === 0 ? 'Сегодня' : `${plural(days, ['Остался', 'Осталось', 'Осталось'])} ${pluralize(days, ['день', 'дня', 'дней'])}`}
                             </Badge>
                           )}

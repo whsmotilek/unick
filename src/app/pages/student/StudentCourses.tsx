@@ -1,3 +1,4 @@
+import { pluralize } from '../../lib/analytics';
 import { useState, useMemo } from 'react';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -48,13 +49,13 @@ export function StudentCourses() {
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto">
+      <div className="flex items-center justify-between mb-5 sm:mb-6 gap-3">
         <div>
-          <h1 className="text-[28px] font-bold text-[#1A1A2E]" style={{ fontFamily: 'var(--font-heading)' }}>Мои курсы</h1>
+          <h1 className="text-[24px] sm:text-[28px] leading-tight font-bold text-[#1A1A2E] mb-1" style={{ fontFamily: 'var(--font-heading)' }}>Мои курсы</h1>
           <p className="text-[13px] text-[#8A8A9A]" style={{ fontFamily: 'var(--font-body)' }}>Курсы, на которые вы записаны</p>
         </div>
-        <Link to="/student/catalog">
+        <Link to="/student/catalog" className="shrink-0">
           <Button variant="outline">
             <Compass className="w-4 h-4 mr-2" />Каталог
           </Button>
@@ -62,7 +63,8 @@ export function StudentCourses() {
       </div>
 
       {myCourses.length > 0 && (
-        <div className="flex gap-2 mb-6 flex-wrap items-center">
+        <div className="flex flex-col-reverse sm:flex-row gap-3 sm:gap-2 mb-6 sm:flex-wrap sm:items-center">
+          <div className="flex gap-2 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 sm:overflow-visible [scrollbar-width:none]">
           {[
             { id: 'all', label: 'Все' },
             { id: 'in-progress', label: 'В процессе' },
@@ -71,7 +73,7 @@ export function StudentCourses() {
             <button
               key={tab.id}
               onClick={() => setFilter(tab.id as any)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              className={`shrink-0 px-4 h-10 rounded-lg text-sm font-medium transition-all ${
                 filter === tab.id ? 'bg-[#1A1A2E] text-white' : 'bg-white text-[#8A8A9A] hover:bg-[#F5F4F2]'
               }`}
               style={{ fontFamily: 'var(--font-body)' }}
@@ -79,13 +81,14 @@ export function StudentCourses() {
               {tab.label}
             </button>
           ))}
-          <div className="relative ml-auto">
+          </div>
+          <div className="relative sm:ml-auto">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8A8A9A]" />
             <Input
               placeholder="Поиск..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 w-64 bg-white border-[#1A1A2E]/10"
+              className="pl-9 w-full sm:w-64 h-11 sm:h-10 text-base sm:text-sm bg-white border-[#1A1A2E]/10"
             />
           </div>
         </div>
@@ -101,7 +104,7 @@ export function StudentCourses() {
           ) : undefined}
         />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {filtered.map((course, i) => {
             const nextLesson = getNextLesson(course);
             const lessonCount = course.modules.reduce((s, m) => s + m.lessons.length, 0);
@@ -113,7 +116,7 @@ export function StudentCourses() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3, delay: i * 0.05 }}
               >
-                <Card className="border-0 overflow-hidden hover:shadow-[0_8px_30px_rgba(0,0,0,0.1)] transition-all hover:-translate-y-1 duration-300 h-full flex flex-col">
+                <Card className="border-0 overflow-hidden hover:shadow-[0_8px_30px_rgba(0,0,0,0.1)] transition-all hover:-translate-y-1 duration-300 h-full flex flex-col gap-0">
                   <div className="aspect-video bg-[#F5F4F2] overflow-hidden relative">
                     {course.cover ? (
                       <img src={course.cover} alt={course.title} className="w-full h-full object-cover" />
@@ -138,11 +141,11 @@ export function StudentCourses() {
                       <Progress value={course.progressPct} className="h-1.5" />
                     </div>
                     <p className="text-[12px] text-[#8A8A9A] mb-4" style={{ fontFamily: 'var(--font-body)' }}>
-                      {lessonCount} уроков
+                      {pluralize(lessonCount, ['урок', 'урока', 'уроков'])}
                     </p>
                     {nextLesson && (
                       <Link to={`/student/courses/${course.id}/lesson/${nextLesson.id}`}>
-                        <Button className="w-full transition-transform active:scale-[0.98]">
+                        <Button className="w-full h-11 sm:h-10 transition-transform active:scale-[0.98]">
                           {isCompleted ? 'Пересмотреть' : course.progressPct > 0 ? 'Продолжить' : 'Начать'}
                           <Play className="w-4 h-4 ml-2" />
                         </Button>
