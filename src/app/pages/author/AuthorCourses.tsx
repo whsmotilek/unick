@@ -20,7 +20,7 @@ export function AuthorCourses() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const myCourses = useMemo(() => {
-    return courses.filter(c => c.schoolId === (user?.schoolId || 'school-1'));
+    return courses.filter(c => c.schoolId === user?.schoolId);
   }, [courses, user]);
 
   const filtered = useMemo(() => {

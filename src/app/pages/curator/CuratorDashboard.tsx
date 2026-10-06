@@ -13,14 +13,16 @@ import { CountUp } from '../../components/CountUp';
 import { EmptyState } from '../../components/EmptyState';
 import { motion } from 'motion/react';
 import { toast } from 'sonner';
+import { sanitizeHtml } from '../../lib/sanitize';
+import { FileList } from '../../components/lesson/FileList';
+import { NotificationBell } from '../../components/NotificationBell';
 import { useNavigate } from 'react-router';
 import { Homework, User } from '../../types';
-import { mockUsers } from '../../data/mockData';
 import logoWhiteFull from '@/assets/logo/logo-full-white.png';
 
 export function CuratorDashboard() {
   const { user, logout } = useAuth();
-  const { courses, enrollments, progress, homework, getCourseProgress, reviewHomework } = useDataStore();
+  const { courses, enrollments, progress, homework, getCourseProgress, reviewHomework, users } = useDataStore();
   const [selectedHw, setSelectedHw] = useState<Homework | null>(null);
   const [feedback, setFeedback] = useState('');
   const navigate = useNavigate();
@@ -30,13 +32,7 @@ export function CuratorDashboard() {
     navigate('/');
   };
 
-  // All users from localStorage
-  const allUsers = useMemo<User[]>(() => {
-    try {
-      const stored = localStorage.getItem('unick_users');
-      return stored ? JSON.parse(stored) : mockUsers;
-    } catch { return mockUsers; }
-  }, [homework, enrollments]);
+  const allUsers = users;
 
   const userMap = useMemo(() => {
     const m: Record<string, User> = {};
@@ -120,6 +116,7 @@ export function CuratorDashboard() {
             <Badge variant="secondary" className="bg-white/15 text-white border-0">Куратор</Badge>
           </div>
           <div className="flex items-center gap-3">
+            <NotificationBell variant="dark" />
             <Avatar className="w-8 h-8">
               <AvatarImage src={user?.avatar} />
               <AvatarFallback className="bg-[#7C6AF7] text-white text-xs">{user?.name?.charAt(0)}</AvatarFallback>
@@ -255,15 +252,16 @@ export function CuratorDashboard() {
             <div className="space-y-4">
               <div className="bg-[#F5F4F2] rounded-xl p-4">
                 <p className="text-[11px] font-semibold text-[#8A8A9A] mb-2 uppercase" style={{ fontFamily: 'var(--font-body)' }}>Задание</p>
-                <p className="text-[13px] text-[#1A1A2E] whitespace-pre-line" style={{ fontFamily: 'var(--font-body)' }}>
-                  {selectedHw.description}
-                </p>
+                <div className="lesson-content text-[13px]" dangerouslySetInnerHTML={{ __html: sanitizeHtml(selectedHw.description || '') }} />
               </div>
               <div className="bg-white border border-[#1A1A2E]/10 rounded-xl p-4">
                 <p className="text-[11px] font-semibold text-[#8A8A9A] mb-2 uppercase" style={{ fontFamily: 'var(--font-body)' }}>Решение ученика</p>
                 <p className="text-[13px] text-[#1A1A2E] whitespace-pre-line" style={{ fontFamily: 'var(--font-body)' }}>
-                  {selectedHw.submission?.content || 'Нет содержимого'}
+                  {selectedHw.submission?.content || (selectedHw.files?.length ? '' : 'Нет содержимого')}
                 </p>
+                {(selectedHw.files?.length ?? 0) > 0 && (
+                  <div className="mt-3"><FileList files={selectedHw.files!} bucket="homework-files" /></div>
+                )}
               </div>
               <div>
                 <label className="text-[12px] font-medium text-[#1A1A2E] mb-1.5 block" style={{ fontFamily: 'var(--font-body)' }}>

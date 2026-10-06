@@ -9,6 +9,8 @@ export const seedCourses: Course[] = [
     description: 'Полный курс по дизайну интерфейсов от основ до продвинутых техник. Научитесь создавать удобные и красивые интерфейсы.',
     cover: 'https://images.unsplash.com/photo-1561070791-2526d30994b5?w=800&h=400&fit=crop',
     status: 'published',
+    accessType: 'free',
+    sequential: false,
     createdAt: '2024-01-15T10:00:00Z',
     updatedAt: '2024-02-20T15:30:00Z',
     modules: [
@@ -124,6 +126,8 @@ export const seedCourses: Course[] = [
     description: 'Научитесь работать в Figma с нуля за 4 недели',
     cover: 'https://images.unsplash.com/photo-1609921212029-bb5a28e60960?w=800&h=400&fit=crop',
     status: 'published',
+    accessType: 'free',
+    sequential: false,
     createdAt: '2024-02-01T10:00:00Z',
     updatedAt: '2024-02-22T12:00:00Z',
     modules: [
@@ -165,6 +169,8 @@ export const seedCourses: Course[] = [
     description: 'Создание и управление дизайн-системами для крупных продуктов',
     cover: 'https://images.unsplash.com/photo-1558655146-d09347e92766?w=800&h=400&fit=crop',
     status: 'draft',
+    accessType: 'free',
+    sequential: false,
     createdAt: '2024-02-15T10:00:00Z',
     updatedAt: '2024-02-25T09:00:00Z',
     modules: []

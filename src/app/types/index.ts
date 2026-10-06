@@ -20,6 +20,8 @@ export interface School {
   plan: 'starter' | 'pro' | 'enterprise';
 }
 
+export type CourseAccessType = 'invite' | 'free' | 'paid';
+
 export interface Course {
   id: string;
   schoolId: string;
@@ -27,6 +29,11 @@ export interface Course {
   description: string;
   cover?: string;
   status: 'draft' | 'published' | 'archived';
+  /** invite — только по приглашению/вручную, free — самозапись, paid — после оплаты */
+  accessType: CourseAccessType;
+  price?: number;
+  /** Уроки открываются строго по порядку */
+  sequential: boolean;
   modules: Module[];
   createdAt: string;
   updatedAt: string;
@@ -86,6 +93,55 @@ export interface Homework {
     type: 'text' | 'file' | 'link';
     content: string;
   };
+  files?: AttachedFile[];
+}
+
+export interface AttachedFile {
+  name: string;
+  /** Путь в хранилище (bucket/path) или внешний URL */
+  path: string;
+  size?: number;
+}
+
+export type EnrollmentSource = 'invite' | 'manual' | 'free' | 'network' | 'payment';
+
+export interface Enrollment {
+  id: string;
+  courseId: string;
+  userId: string;
+  status: 'active' | 'revoked' | 'completed';
+  source: EnrollmentSource;
+  inviteId?: string;
+  createdAt: string;
+}
+
+export interface Invite {
+  id: string;
+  courseId: string;
+  code: string;
+  label?: string;
+  maxUses?: number;
+  uses: number;
+  expiresAt?: string;
+  active: boolean;
+  createdAt: string;
+}
+
+export interface LessonProgressRow {
+  userId: string;
+  courseId: string;
+  lessonId: string;
+  completedAt: string;
+}
+
+export interface InviteInfo {
+  courseId: string;
+  title: string;
+  description: string;
+  cover?: string;
+  schoolName: string;
+  lessonsCount: number;
+  valid: boolean;
 }
 
 export interface Flow {
@@ -133,4 +189,36 @@ export interface AIInsight {
   evidence?: string;
   recommendation?: string;
   actionable: boolean;
+}
+
+/** Ключ теста: правильные ответы, видны только сотрудникам школы */
+export interface QuizKey {
+  lessonId: string;
+  courseId: string;
+  /** questionId -> optionId[] */
+  answers: Record<string, string[]>;
+  passPercent: number;
+}
+
+export interface QuizResult {
+  correct: number;
+  total: number;
+  percent: number;
+  passed: boolean;
+  passPercent: number;
+  /** id вопросов с ошибкой */
+  wrong: string[];
+  /** Правильные ответы — только если тест пройден */
+  key: Record<string, string[]> | null;
+}
+
+export interface AppNotification {
+  id: string;
+  userId: string;
+  type: 'homework_submitted' | 'homework_reviewed' | 'student_enrolled' | 'message' | string;
+  title: string;
+  body?: string;
+  link?: string;
+  read: boolean;
+  createdAt: string;
 }

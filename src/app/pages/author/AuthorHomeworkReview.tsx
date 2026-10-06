@@ -11,31 +11,26 @@ import { useAuth } from '../../context/AuthContext';
 import { EmptyState } from '../../components/EmptyState';
 import { motion } from 'motion/react';
 import { toast } from 'sonner';
+import { sanitizeHtml } from '../../lib/sanitize';
+import { FileList } from '../../components/lesson/FileList';
 import { Homework } from '../../types';
 
 export function AuthorHomeworkReview() {
   const { user } = useAuth();
-  const { courses, homework, reviewHomework } = useDataStore();
+  const { courses, homework, reviewHomework, users } = useDataStore();
   const [filter, setFilter] = useState<'all' | 'pending' | 'reviewed'>('pending');
   const [selectedHw, setSelectedHw] = useState<Homework | null>(null);
   const [feedback, setFeedback] = useState('');
 
   const myCourseIds = useMemo(() => {
-    return courses.filter(c => c.schoolId === (user?.schoolId || 'school-1')).map(c => c.id);
+    return courses.filter(c => c.schoolId === user?.schoolId).map(c => c.id);
   }, [courses, user]);
 
-  // Get all users for displaying student info
   const userMap = useMemo(() => {
-    try {
-      const stored = localStorage.getItem('unick_users');
-      const users = stored ? JSON.parse(stored) : [];
-      const map: Record<string, any> = {};
-      for (const u of users) map[u.id] = u;
-      return map;
-    } catch {
-      return {};
-    }
-  }, [homework]);
+    const map: Record<string, (typeof users)[number]> = {};
+    for (const u of users) map[u.id] = u;
+    return map;
+  }, [users]);
 
   const myCoursesMap = useMemo(() => {
     const m: Record<string, string> = {};
@@ -168,21 +163,23 @@ export function AuthorHomeworkReview() {
             <div className="space-y-4">
               <div className="bg-[#F5F4F2] rounded-xl p-4">
                 <p className="text-[11px] font-semibold text-[#8A8A9A] mb-2 uppercase" style={{ fontFamily: 'var(--font-body)' }}>Задание</p>
-                <p className="text-[13px] text-[#1A1A2E] whitespace-pre-line" style={{ fontFamily: 'var(--font-body)' }}>
-                  {selectedHw.description}
-                </p>
+                <div className="lesson-content text-[13px]" dangerouslySetInnerHTML={{ __html: sanitizeHtml(selectedHw.description || '') }} />
               </div>
               <div className="bg-white border border-[#1A1A2E]/10 rounded-xl p-4">
                 <p className="text-[11px] font-semibold text-[#8A8A9A] mb-2 uppercase" style={{ fontFamily: 'var(--font-body)' }}>Решение ученика</p>
                 <p className="text-[13px] text-[#1A1A2E] whitespace-pre-line" style={{ fontFamily: 'var(--font-body)' }}>
-                  {selectedHw.submission?.content || 'Нет содержимого'}
+                  {selectedHw.submission?.content || (selectedHw.files?.length ? '' : 'Нет содержимого')}
                 </p>
+                {(selectedHw.files?.length ?? 0) > 0 && (
+                  <div className="mt-3"><FileList files={selectedHw.files!} bucket="homework-files" /></div>
+                )}
               </div>
               <div>
-                <label className="text-[12px] font-medium text-[#1A1A2E] mb-1.5 block" style={{ fontFamily: 'var(--font-body)' }}>
+                <label htmlFor="hw-feedback" className="text-[12px] font-medium text-[#1A1A2E] mb-1.5 block" style={{ fontFamily: 'var(--font-body)' }}>
                   Обратная связь
                 </label>
                 <Textarea
+                  id="hw-feedback"
                   rows={4}
                   placeholder="Напишите комментарий или замечания..."
                   value={feedback}

@@ -14,9 +14,11 @@ interface MobileNavProps {
   navigation: NavItem[];
   rootHref: string;
   footer?: React.ReactNode;
+  /** Доп. элементы в верхней панели (например, колокольчик уведомлений) */
+  actions?: React.ReactNode;
 }
 
-export function MobileNav({ navigation, rootHref, footer }: MobileNavProps) {
+export function MobileNav({ navigation, rootHref, footer, actions }: MobileNavProps) {
   const [open, setOpen] = useState(false);
   const location = useLocation();
   const isActive = (path: string) => location.pathname === path;
@@ -28,13 +30,16 @@ export function MobileNav({ navigation, rootHref, footer }: MobileNavProps) {
         <Link to={rootHref} className="flex items-center">
           <img src={logoWhiteFull} alt="Unick" className="h-5" />
         </Link>
-        <button
-          onClick={() => setOpen(true)}
-          className="text-white p-2 hover:bg-white/10 rounded-lg transition-colors"
-          aria-label="Open menu"
-        >
-          <Menu className="w-5 h-5" />
-        </button>
+        <div className="flex items-center gap-1">
+          {actions}
+          <button
+            onClick={() => setOpen(true)}
+            className="text-white p-2 hover:bg-white/10 rounded-lg transition-colors"
+            aria-label="Open menu"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+        </div>
       </div>
 
       <AnimatePresence>

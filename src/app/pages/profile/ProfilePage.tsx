@@ -12,34 +12,24 @@ import { toast } from 'sonner';
 import { motion } from 'motion/react';
 
 export function ProfilePage() {
-  const { user, logout } = useAuth();
+  const { user, logout, updateProfile } = useAuth();
   const { courses, enrollments, getCompletedLessonsCount, homework } = useDataStore();
   const [name, setName] = useState(user?.name || '');
-  const [email, setEmail] = useState(user?.email || '');
+  const [saving, setSaving] = useState(false);
   const [avatar, setAvatar] = useState(user?.avatar || '');
 
   if (!user) return null;
 
-  const handleSave = () => {
-    if (!name.trim() || !email.trim()) {
-      toast.error('Имя и email обязательны');
+  const handleSave = async () => {
+    if (!name.trim()) {
+      toast.error('Введите имя');
       return;
     }
-    try {
-      const stored = localStorage.getItem('unick_users');
-      const users = stored ? JSON.parse(stored) : [];
-      const updated = users.map((u: any) =>
-        u.id === user.id ? { ...u, name: name.trim(), email: email.trim(), avatar: avatar.trim() } : u
-      );
-      localStorage.setItem('unick_users', JSON.stringify(updated));
-      // Update current user in localStorage
-      const updatedUser = { ...user, name: name.trim(), email: email.trim(), avatar: avatar.trim() };
-      localStorage.setItem('unick_auth_user', JSON.stringify(updatedUser));
-      toast.success('Профиль обновлён! Перезагрузите страницу для применения');
-      setTimeout(() => window.location.reload(), 600);
-    } catch {
-      toast.error('Не удалось сохранить');
-    }
+    setSaving(true);
+    const r = await updateProfile({ name: name.trim(), avatar: avatar.trim() || undefined });
+    setSaving(false);
+    if (r.success) toast.success('Профиль сохранён');
+    else toast.error(r.error || 'Не удалось сохранить');
   };
 
   // Stats
@@ -105,7 +95,7 @@ export function ProfilePage() {
             </div>
             <div>
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} className="mt-1.5" />
+              <Input id="email" type="email" value={user.email} disabled className="mt-1.5" />
             </div>
             <div>
               <Label htmlFor="avatar">Аватар (URL)</Label>
@@ -115,7 +105,7 @@ export function ProfilePage() {
               <Button variant="outline" onClick={logout} className="text-[#FF6B6B] border-[#FF6B6B]/30 hover:bg-[#FF6B6B]/10">
                 Выйти из аккаунта
               </Button>
-              <Button onClick={handleSave} className="transition-transform active:scale-[0.98]">
+              <Button onClick={handleSave} disabled={saving} className="transition-transform active:scale-[0.98]">
                 <Save className="w-4 h-4 mr-2" />Сохранить
               </Button>
             </div>

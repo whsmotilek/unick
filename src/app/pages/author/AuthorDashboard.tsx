@@ -11,10 +11,10 @@ import { motion } from 'motion/react';
 
 export function AuthorDashboard() {
   const { user } = useAuth();
-  const { courses, enrollments, homework, getCourseProgress } = useDataStore();
+  const { courses, enrollments, homework, getCourseProgress, users } = useDataStore();
 
   const myCourses = useMemo(() => {
-    return courses.filter(c => c.schoolId === (user?.schoolId || 'school-1'));
+    return courses.filter(c => c.schoolId === user?.schoolId);
   }, [courses, user]);
 
   const myCourseIds = useMemo(() => myCourses.map(c => c.id), [myCourses]);
@@ -44,14 +44,8 @@ export function AuthorDashboard() {
 
   // Recent activity = recent submissions + completions
   const recentActivity = useMemo(() => {
-    const allUsers = (() => {
-      try {
-        const stored = localStorage.getItem('unick_users');
-        return stored ? JSON.parse(stored) : [];
-      } catch { return []; }
-    })();
-    const userMap: Record<string, any> = {};
-    for (const u of allUsers) userMap[u.id] = u;
+    const userMap: Record<string, (typeof users)[number]> = {};
+    for (const u of users) userMap[u.id] = u;
 
     const items: Array<{ time: string; userId: string; userName: string; userAvatar?: string; action: string; courseTitle?: string }> = [];
 
@@ -69,7 +63,7 @@ export function AuthorDashboard() {
     });
 
     return items.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()).slice(0, 5);
-  }, [homework, myCourseIds, courses]);
+  }, [homework, myCourseIds, courses, users]);
 
   const dashStats = [
     { label: 'Активных учеников', value: stats.activeStudents, icon: Users, color: 'bg-[#EDE9FF]', text: 'text-[#7C6AF7]' },

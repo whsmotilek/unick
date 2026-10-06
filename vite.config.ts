@@ -3,8 +3,9 @@ import path from 'path'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 
+// GitHub Pages обслуживает сайт по /unick/, на своём сервере — с корня домена (VITE_BASE=/)
 export default defineConfig({
-  base: '/unick/',
+  base: process.env.VITE_BASE || '/unick/',
   plugins: [
     react(),
     tailwindcss(),

@@ -1,9 +1,10 @@
 // Apps Script для приёма заявок из waitlist-формы Unick.
 //
 // Установка:
-// 1. Открыть таблицу https://docs.google.com/spreadsheets/d/1q39YXUSzI3OQFsEmBlPDQmxO2RzHjgfUb8u1f1ctszQ/edit
+// 1. Открыть таблицу заявок (доступ к ней должен быть ограничен — «Доступ ограничен», не «Все, у кого есть ссылка»)
 // 2. Extensions → Apps Script
 // 3. Заменить содержимое Code.gs этим файлом
+// 3a. Project Settings → Script Properties → добавить свойство SHEET_ID = <id таблицы из её адреса>
 // 4. Save (диск)
 // 5. Deploy → New deployment → выбрать "Web app"
 //    - Description: "Unick waitlist endpoint"
@@ -18,7 +19,8 @@
 // При каждом деплое или изменении кода Apps Script нужно нажимать Deploy → Manage deployments → "Edit"
 // и выбирать "New version", иначе клиенты будут стучаться в старую версию.
 
-const SHEET_ID = '1q39YXUSzI3OQFsEmBlPDQmxO2RzHjgfUb8u1f1ctszQ';
+// ID таблицы хранится в свойствах скрипта, а не в публичном репозитории
+const SHEET_ID = PropertiesService.getScriptProperties().getProperty('SHEET_ID');
 const SHEET_NAME = 'Waitlist'; // имя листа; будет создан, если отсутствует
 
 function doPost(e) {

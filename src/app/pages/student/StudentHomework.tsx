@@ -2,19 +2,20 @@ import { useState, useMemo } from 'react';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
-import { Textarea } from '../../components/ui/textarea';
-import { FileCheck, Clock, Calendar, CheckCircle2, AlertCircle } from 'lucide-react';
+import { FileCheck, Calendar, ArrowRight } from 'lucide-react';
+import { Link } from 'react-router';
+import { HomeworkPanel, HomeworkStatusBadge } from '../../components/lesson/HomeworkPanel';
+import { lessonData, homeworkDeadline } from '../../lib/lessonContent';
+import { sanitizeHtml } from '../../lib/sanitize';
 import { useDataStore } from '../../store/DataStore';
 import { useAuth } from '../../context/AuthContext';
 import { EmptyState } from '../../components/EmptyState';
 import { motion } from 'motion/react';
-import { toast } from 'sonner';
 
 export function StudentHomework() {
   const { user } = useAuth();
-  const { courses, getHomeworkForStudent, submitHomework, enrollments } = useDataStore();
+  const { courses, getHomeworkForStudent, enrollments, enrollmentRecords } = useDataStore();
   const [filter, setFilter] = useState<'all' | 'pending' | 'submitted' | 'graded'>('all');
-  const [submissions, setSubmissions] = useState<Record<string, string>>({});
 
   // Build "available" homework: all homework lessons in enrolled courses
   const availableTasks = useMemo(() => {
@@ -37,14 +38,16 @@ export function StudentHomework() {
         for (const l of m.lessons) {
           if (l.type === 'homework') {
             const submission = userHw.find(h => h.lessonId === l.id);
+            const data = lessonData(l);
+            const enrolledAt = enrollmentRecords.find(e => e.userId === user.id && e.courseId === c.id)?.createdAt;
             tasks.push({
               lessonId: l.id,
               courseId: c.id,
               courseTitle: c.title,
               moduleTitle: m.title,
               lessonTitle: l.title,
-              instructions: l.content?.data?.instructions || '',
-              deadline: l.content?.data?.deadline,
+              instructions: data.html || '',
+              deadline: homeworkDeadline(data, enrolledAt),
               submitted: submission,
             });
           }
@@ -52,7 +55,7 @@ export function StudentHomework() {
       }
     }
     return tasks;
-  }, [user, courses, enrollments, getHomeworkForStudent]);
+  }, [user, courses, enrollments, enrollmentRecords, getHomeworkForStudent]);
 
   const filtered = useMemo(() => {
     if (filter === 'all') return availableTasks;
@@ -68,26 +71,6 @@ export function StudentHomework() {
     submitted: availableTasks.filter(t => t.submitted?.status === 'submitted' || t.submitted?.status === 'review').length,
     graded: availableTasks.filter(t => t.submitted?.status === 'approved' || t.submitted?.status === 'returned').length,
   }), [availableTasks]);
-
-  const handleSubmit = (task: typeof availableTasks[0]) => {
-    if (!user) return;
-    const content = submissions[task.lessonId];
-    if (!content?.trim()) {
-      toast.error('Введите решение задания');
-      return;
-    }
-    submitHomework({
-      lessonId: task.lessonId,
-      studentId: user.id,
-      courseId: task.courseId,
-      title: task.lessonTitle,
-      description: task.instructions,
-      deadline: task.deadline,
-      content,
-    });
-    setSubmissions(prev => ({ ...prev, [task.lessonId]: '' }));
-    toast.success('Работа отправлена!');
-  };
 
   const daysToDeadline = (deadline?: string) => {
     if (!deadline) return null;
@@ -165,9 +148,7 @@ export function StudentHomework() {
                         </h3>
                       </div>
                       <div className="flex items-center gap-2">
-                        {status === 'approved' && <Badge variant="success"><CheckCircle2 className="w-3 h-3 mr-1" />Принято</Badge>}
-                        {status === 'returned' && <Badge variant="destructive"><AlertCircle className="w-3 h-3 mr-1" />На доработку</Badge>}
-                        {(status === 'submitted' || status === 'review') && <Badge variant="info"><Clock className="w-3 h-3 mr-1" />На проверке</Badge>}
+                        <HomeworkStatusBadge status={status} />
                         {!status && days !== null && (
                           <Badge variant={days < 3 ? 'destructive' : days < 7 ? 'warning' : 'secondary'}>
                             <Calendar className="w-3 h-3 mr-1" />
@@ -176,44 +157,12 @@ export function StudentHomework() {
                         )}
                       </div>
                     </div>
-                    <p className="text-[13px] text-[#1A1A2E]/70 mb-4 whitespace-pre-line" style={{ fontFamily: 'var(--font-body)' }}>
-                      {task.instructions}
-                    </p>
-
-                    {task.submitted && (
-                      <div className="bg-[#F5F4F2] rounded-xl p-4 mb-4">
-                        <p className="text-[11px] font-semibold text-[#8A8A9A] mb-2 uppercase tracking-wide" style={{ fontFamily: 'var(--font-body)' }}>
-                          Ваше решение
-                        </p>
-                        <p className="text-[13px] text-[#1A1A2E] whitespace-pre-line" style={{ fontFamily: 'var(--font-body)' }}>
-                          {task.submitted.submission?.content}
-                        </p>
-                        {task.submitted.feedback && (
-                          <div className="mt-4 pt-4 border-t border-[#1A1A2E]/10">
-                            <p className="text-[11px] font-semibold text-[#8A8A9A] mb-2 uppercase tracking-wide" style={{ fontFamily: 'var(--font-body)' }}>
-                              Обратная связь от автора
-                            </p>
-                            <p className="text-[13px] text-[#1A1A2E]" style={{ fontFamily: 'var(--font-body)' }}>
-                              {task.submitted.feedback}
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {(!task.submitted || status === 'returned') && (
-                      <div className="space-y-3">
-                        <Textarea
-                          rows={5}
-                          placeholder="Опишите ваше решение..."
-                          value={submissions[task.lessonId] || ''}
-                          onChange={e => setSubmissions(prev => ({ ...prev, [task.lessonId]: e.target.value }))}
-                        />
-                        <Button onClick={() => handleSubmit(task)} className="transition-transform active:scale-[0.98]">
-                          Сдать работу
-                        </Button>
-                      </div>
-                    )}
+                    <div className="lesson-content text-[13px] mb-4" dangerouslySetInnerHTML={{ __html: sanitizeHtml(task.instructions) }} />
+                    <HomeworkPanel courseId={task.courseId} lessonId={task.lessonId} title={task.lessonTitle}
+                      description={task.instructions} deadline={task.deadline} />
+                    <Link to={`/student/courses/${task.courseId}/lesson/${task.lessonId}`} className="inline-flex items-center text-sm text-[#7C6AF7] hover:underline mt-3">
+                      Открыть урок<ArrowRight className="w-3.5 h-3.5 ml-1" />
+                    </Link>
                   </CardContent>
                 </Card>
               </motion.div>

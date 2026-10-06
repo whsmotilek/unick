@@ -1,60 +1,74 @@
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { Course, Module, Lesson, StudentProgress, Homework, ChatMessage, ChatThread } from '../types';
-import { seedCourses, seedEnrollments, seedProgress, seedHomework, seedChats } from './seed';
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef, ReactNode } from 'react';
+import { toast } from 'sonner';
+import {
+  Course, Module, Lesson, StudentProgress, Homework, ChatMessage, ChatThread, User,
+  Enrollment, Invite, InviteInfo, LessonProgressRow, AttachedFile, QuizKey, QuizResult, AppNotification,
+} from '../types';
 import { useAuth } from '../context/AuthContext';
+import { supabase } from '../lib/supabase';
+import { createSupabaseBackend } from '../lib/backend/supabaseBackend';
+import { createLocalBackend } from '../lib/backend/localBackend';
+import { errorMessage, type Backend, type FileBucket, type Snapshot } from '../lib/backend/types';
 
-const KEYS = {
-  courses: 'unick_v1_courses',
-  enrollments: 'unick_v1_enrollments',
-  progress: 'unick_v1_progress',
-  homework: 'unick_v1_homework',
-  chats: 'unick_v1_chats',
-} as const;
-
-function load<T>(key: string, fallback: T): T {
-  try {
-    const stored = localStorage.getItem(key);
-    return stored ? JSON.parse(stored) : fallback;
-  } catch {
-    return fallback;
-  }
-}
-
-function save<T>(key: string, value: T) {
-  localStorage.setItem(key, JSON.stringify(value));
-}
+/**
+ * Единое хранилище данных приложения.
+ * Данные текущего пользователя загружаются с бэкенда целиком (на масштабе пилота это десятки записей),
+ * изменения применяются к состоянию сразу (оптимистично) и параллельно отправляются на бэкенд.
+ * При ошибке показываем сообщение и перезагружаем данные с сервера.
+ */
 
 interface DataStoreContextType {
-  // Entities
+  /** Данные ещё не загружены */
+  loading: boolean;
+  refresh(): Promise<void>;
+
   courses: Course[];
+  users: User[];
+  getUser(id: string): User | undefined;
+  enrollmentRecords: Enrollment[];
+  invites: Invite[];
+  /** Ключи тестов (только у сотрудников школы) */
+  quizKeys: QuizKey[];
+  notifications: AppNotification[];
+  /** Сырые отметки прохождения уроков (для аналитики по датам) */
+  progressRows: LessonProgressRow[];
+  /** userId -> courseId[] (активные записи) */
   enrollments: Record<string, string[]>;
   progress: Record<string, Record<string, StudentProgress>>;
   homework: Homework[];
   chats: Record<string, ChatMessage[]>;
 
-  // Course CRUD
+  // Курсы
   createCourse(data: Partial<Course>): Course;
   updateCourse(id: string, patch: Partial<Course>): void;
   deleteCourse(id: string): void;
   getCourse(id: string): Course | undefined;
 
-  // Module CRUD
+  // Модули
   addModule(courseId: string, title: string, description?: string): Module;
   updateModule(courseId: string, moduleId: string, patch: Partial<Module>): void;
   deleteModule(courseId: string, moduleId: string): void;
+  moveModule(courseId: string, moduleId: string, direction: -1 | 1): void;
 
-  // Lesson CRUD
+  // Уроки
   addLesson(courseId: string, moduleId: string, data: Partial<Lesson>): Lesson;
   updateLesson(courseId: string, moduleId: string, lessonId: string, patch: Partial<Lesson>): void;
   deleteLesson(courseId: string, moduleId: string, lessonId: string): void;
+  moveLesson(courseId: string, moduleId: string, lessonId: string, direction: -1 | 1): void;
   getLesson(courseId: string, lessonId: string): { lesson: Lesson; module: Module } | undefined;
 
-  // Enrollment
+  // Доступ
   enrollStudent(userId: string, courseId: string): void;
   unenrollStudent(userId: string, courseId: string): void;
   isEnrolled(userId: string, courseId: string): boolean;
+  enrollFree(courseId: string): Promise<void>;
+  enrollByEmail(courseId: string, email: string): Promise<void>;
+  createInvite(courseId: string, opts?: { label?: string; maxUses?: number; expiresAt?: string }): Invite;
+  setInviteActive(inviteId: string, active: boolean): void;
+  inviteInfo(code: string): Promise<InviteInfo | null>;
+  redeemInvite(code: string): Promise<string>;
 
-  // Progress
+  // Прогресс
   getProgress(userId: string, courseId: string): StudentProgress | undefined;
   markLessonComplete(userId: string, courseId: string, lessonId: string): void;
   unmarkLessonComplete(userId: string, courseId: string, lessonId: string): void;
@@ -62,353 +76,442 @@ interface DataStoreContextType {
   getCompletedLessonsCount(userId: string): number;
   getCourseProgress(userId: string, courseId: string): number;
 
-  // Homework
+  // Тесты
+  saveQuizKey(key: QuizKey): void;
+  submitQuiz(lessonId: string, answers: Record<string, string[]>): Promise<QuizResult>;
+
+  // Уведомления
+  markNotificationsRead(ids: string[]): void;
+
+  // Домашние задания
   getHomeworkForStudent(userId: string): Homework[];
   getHomeworkForCourse(courseId: string): Homework[];
-  submitHomework(data: Omit<Homework, 'id' | 'submittedAt' | 'status'> & { content: string }): Homework;
+  submitHomework(data: Omit<Homework, 'id' | 'submittedAt' | 'status'> & { content: string; files?: AttachedFile[] }): Homework;
   reviewHomework(id: string, status: 'approved' | 'returned', feedback: string, reviewerId: string): void;
 
-  // Chat
+  // Чат
   sendMessage(fromUserId: string, toUserId: string, content: string): ChatMessage;
   getChatMessages(userIdA: string, userIdB: string): ChatMessage[];
   getChatThreads(userId: string): ChatThread[];
   markChatRead(userId: string, withUserId: string): void;
+
+  // Файлы
+  uploadFile(bucket: FileBucket, path: string, file: File): Promise<string>;
+  fileUrl(bucket: FileBucket, path: string): Promise<string>;
 }
 
 const DataStoreContext = createContext<DataStoreContextType | undefined>(undefined);
+
+const EMPTY: Snapshot = { courses: [], enrollments: [], progress: [], homework: [], messages: [], users: [], invites: [], quizKeys: [], notifications: [] };
 
 function chatKey(a: string, b: string): string {
   return [a, b].sort().join('|');
 }
 
-function generateId(prefix: string): string {
-  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-}
+const newId = () => crypto.randomUUID();
+const nowIso = () => new Date().toISOString();
+const countLessons = (c: Course) => c.modules.reduce((sum, m) => sum + m.lessons.length, 0);
 
 export function DataStoreProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
-  const [courses, setCourses] = useState<Course[]>(() => load(KEYS.courses, seedCourses));
-  const [enrollments, setEnrollments] = useState<Record<string, string[]>>(() => load(KEYS.enrollments, seedEnrollments));
-  const [progress, setProgress] = useState<Record<string, Record<string, StudentProgress>>>(() => load(KEYS.progress, seedProgress));
-  const [homework, setHomework] = useState<Homework[]>(() => load(KEYS.homework, seedHomework));
-  const [chats, setChats] = useState<Record<string, ChatMessage[]>>(() => load(KEYS.chats, seedChats));
+  const userRef = useRef(user);
+  userRef.current = user;
 
-  // Persist on every change
-  useEffect(() => save(KEYS.courses, courses), [courses]);
-  useEffect(() => save(KEYS.enrollments, enrollments), [enrollments]);
-  useEffect(() => save(KEYS.progress, progress), [progress]);
-  useEffect(() => save(KEYS.homework, homework), [homework]);
-  useEffect(() => save(KEYS.chats, chats), [chats]);
+  const backend: Backend = useMemo(
+    () => (supabase ? createSupabaseBackend(supabase) : createLocalBackend(() => userRef.current)),
+    [],
+  );
 
-  // ===== Courses =====
-  const createCourse = useCallback((data: Partial<Course>): Course => {
-    const newCourse: Course = {
-      id: generateId('course'),
-      schoolId: data.schoolId || user?.schoolId || 'school-1',
-      title: data.title || 'Новый курс',
-      description: data.description || '',
-      cover: data.cover,
-      status: data.status || 'draft',
-      modules: data.modules || [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    setCourses(prev => [...prev, newCourse]);
-    return newCourse;
-  }, [user]);
+  const [data, setData] = useState<Snapshot>(EMPTY);
+  const [loading, setLoading] = useState(true);
+  const lastLoad = useRef(0);
 
-  const updateCourse = useCallback((id: string, patch: Partial<Course>) => {
-    setCourses(prev => prev.map(c => c.id === id ? { ...c, ...patch, updatedAt: new Date().toISOString() } : c));
-  }, []);
+  const refresh = useCallback(async () => {
+    const u = userRef.current;
+    if (!u) { setData(EMPTY); setLoading(false); return; }
+    try {
+      const snap = await backend.load(u);
+      lastLoad.current = Date.now();
+      setData(snap);
+    } catch (e) {
+      toast.error(`Не удалось загрузить данные: ${errorMessage(e)}`);
+    } finally {
+      setLoading(false);
+    }
+  }, [backend]);
 
-  const deleteCourse = useCallback((id: string) => {
-    setCourses(prev => prev.filter(c => c.id !== id));
-    setEnrollments(prev => {
-      const next: Record<string, string[]> = {};
-      for (const [userId, courseIds] of Object.entries(prev)) {
-        next[userId] = courseIds.filter(cid => cid !== id);
-      }
-      return next;
+  useEffect(() => {
+    setLoading(true);
+    refresh();
+  }, [user?.id, refresh]);
+
+  // Подтягиваем изменения других пользователей при возврате на вкладку и раз в минуту
+  useEffect(() => {
+    if (!user) return;
+    const onFocus = () => { if (Date.now() - lastLoad.current > 15_000) refresh(); };
+    window.addEventListener('focus', onFocus);
+    const timer = window.setInterval(() => { if (document.visibilityState === 'visible') refresh(); }, 60_000);
+    return () => { window.removeEventListener('focus', onFocus); window.clearInterval(timer); };
+  }, [user, refresh]);
+
+  // Последнее сохранение каждого урока: ключ теста ссылается на урок и должен уйти после него
+  const lessonSaves = useRef(new Map<string, Promise<unknown>>());
+  const trackLessonSave = (lessonId: string, op: Promise<unknown>) => {
+    lessonSaves.current.set(lessonId, op.catch(() => undefined));
+    return op;
+  };
+
+  /** Отправить изменение на бэкенд; при ошибке — сообщить и откатиться к серверному состоянию. */
+  const persist = useCallback((op: Promise<unknown>) => {
+    op.catch(e => {
+      toast.error(`Изменение не сохранилось: ${errorMessage(e)}`);
+      refresh();
     });
-  }, []);
+  }, [refresh]);
 
-  const getCourse = useCallback((id: string) => courses.find(c => c.id === id), [courses]);
+  const patchCourses = (fn: (courses: Course[]) => Course[]) => setData(d => ({ ...d, courses: fn(d.courses) }));
+  const findCourse = (id: string) => data.courses.find(c => c.id === id);
 
-  // ===== Modules =====
-  const addModule = useCallback((courseId: string, title: string, description?: string): Module => {
-    const newModule: Module = {
-      id: generateId('module'),
-      courseId,
-      title,
-      description,
-      order: 0,
-      lessons: [],
+  // ===== Производные структуры =====
+
+  const enrollments = useMemo(() => {
+    const map: Record<string, string[]> = {};
+    for (const e of data.enrollments) {
+      if (e.status === 'revoked') continue;
+      (map[e.userId] ??= []).push(e.courseId);
+    }
+    return map;
+  }, [data.enrollments]);
+
+  const progress = useMemo(() => {
+    const map: Record<string, Record<string, StudentProgress>> = {};
+    for (const row of data.progress) {
+      const byCourse = (map[row.userId] ??= {});
+      const p = (byCourse[row.courseId] ??= {
+        userId: row.userId, courseId: row.courseId, progress: 0, completedLessons: [], lastActivity: row.completedAt, totalTimeSpent: 0,
+      });
+      p.completedLessons.push(row.lessonId);
+      if (row.completedAt > p.lastActivity) p.lastActivity = row.completedAt;
+    }
+    for (const byCourse of Object.values(map)) {
+      for (const p of Object.values(byCourse)) {
+        const course = data.courses.find(c => c.id === p.courseId);
+        const total = course ? countLessons(course) : 0;
+        if (course) {
+          const existing = new Set(course.modules.flatMap(m => m.lessons.map(l => l.id)));
+          p.completedLessons = p.completedLessons.filter(id => existing.has(id));
+        }
+        p.progress = total ? Math.round((p.completedLessons.length / total) * 100) : 0;
+      }
+    }
+    return map;
+  }, [data.progress, data.courses]);
+
+  const chats = useMemo(() => {
+    const map: Record<string, ChatMessage[]> = {};
+    for (const m of data.messages) (map[chatKey(m.fromUserId, m.toUserId)] ??= []).push(m);
+    return map;
+  }, [data.messages]);
+
+  const usersById = useMemo(() => new Map(data.users.map(u => [u.id, u])), [data.users]);
+  const getUser = useCallback((id: string) => usersById.get(id), [usersById]);
+
+  // ===== Курсы =====
+
+  const createCourse = (input: Partial<Course>): Course => {
+    const course: Course = {
+      id: newId(),
+      schoolId: input.schoolId || user?.schoolId || '',
+      title: input.title || 'Новый курс',
+      description: input.description || '',
+      cover: input.cover,
+      status: input.status || 'draft',
+      accessType: input.accessType || 'invite',
+      price: input.price,
+      sequential: input.sequential ?? false,
+      modules: [],
+      createdAt: nowIso(),
+      updatedAt: nowIso(),
     };
-    setCourses(prev => prev.map(c => {
-      if (c.id !== courseId) return c;
-      const order = c.modules.length + 1;
-      return { ...c, modules: [...c.modules, { ...newModule, order }], updatedAt: new Date().toISOString() };
-    }));
-    return newModule;
-  }, []);
+    patchCourses(cs => [...cs, course]);
+    persist(backend.saveCourse(course));
+    return course;
+  };
 
-  const updateModule = useCallback((courseId: string, moduleId: string, patch: Partial<Module>) => {
-    setCourses(prev => prev.map(c => {
-      if (c.id !== courseId) return c;
-      return { ...c, modules: c.modules.map(m => m.id === moduleId ? { ...m, ...patch } : m), updatedAt: new Date().toISOString() };
-    }));
-  }, []);
+  const updateCourse = (id: string, patch: Partial<Course>) => {
+    const current = findCourse(id);
+    if (!current) return;
+    const next = { ...current, ...patch, updatedAt: nowIso() };
+    patchCourses(cs => cs.map(c => (c.id === id ? next : c)));
+    persist(backend.saveCourse(next));
+  };
 
-  const deleteModule = useCallback((courseId: string, moduleId: string) => {
-    setCourses(prev => prev.map(c => {
-      if (c.id !== courseId) return c;
-      return { ...c, modules: c.modules.filter(m => m.id !== moduleId), updatedAt: new Date().toISOString() };
+  const deleteCourse = (id: string) => {
+    setData(d => ({
+      ...d,
+      courses: d.courses.filter(c => c.id !== id),
+      enrollments: d.enrollments.filter(e => e.courseId !== id),
+      invites: d.invites.filter(i => i.courseId !== id),
     }));
-  }, []);
+    persist(backend.deleteCourse(id));
+  };
 
-  // ===== Lessons =====
-  const addLesson = useCallback((courseId: string, moduleId: string, data: Partial<Lesson>): Lesson => {
-    const newLesson: Lesson = {
-      id: generateId('lesson'),
+  const getCourse = useCallback((id: string) => data.courses.find(c => c.id === id), [data.courses]);
+
+  // ===== Модули =====
+
+  const withModules = (courseId: string, fn: (ms: Module[]) => Module[]) =>
+    patchCourses(cs => cs.map(c => (c.id === courseId ? { ...c, modules: fn(c.modules), updatedAt: nowIso() } : c)));
+
+  const addModule = (courseId: string, title: string, description?: string): Module => {
+    const course = findCourse(courseId);
+    const module: Module = { id: newId(), courseId, title, description, order: (course?.modules.length ?? 0) + 1, lessons: [] };
+    withModules(courseId, ms => [...ms, module]);
+    persist(backend.saveModule(module));
+    return module;
+  };
+
+  const updateModule = (courseId: string, moduleId: string, patch: Partial<Module>) => {
+    const m = findCourse(courseId)?.modules.find(x => x.id === moduleId);
+    if (!m) return;
+    const next = { ...m, ...patch };
+    withModules(courseId, ms => ms.map(x => (x.id === moduleId ? next : x)));
+    persist(backend.saveModule(next));
+  };
+
+  const deleteModule = (courseId: string, moduleId: string) => {
+    withModules(courseId, ms => ms.filter(m => m.id !== moduleId));
+    persist(backend.deleteModule(moduleId));
+  };
+
+  const moveModule = (courseId: string, moduleId: string, direction: -1 | 1) => {
+    const course = findCourse(courseId);
+    if (!course) return;
+    const list = [...course.modules];
+    const i = list.findIndex(m => m.id === moduleId);
+    const j = i + direction;
+    if (i < 0 || j < 0 || j >= list.length) return;
+    [list[i], list[j]] = [list[j], list[i]];
+    const renumbered = list.map((m, idx) => ({ ...m, order: idx + 1 }));
+    withModules(courseId, () => renumbered);
+    persist(Promise.all([renumbered[i], renumbered[j]].map(m => backend.saveModule(m))));
+  };
+
+  // ===== Уроки =====
+
+  const withLessons = (courseId: string, moduleId: string, fn: (ls: Lesson[]) => Lesson[]) =>
+    withModules(courseId, ms => ms.map(m => (m.id === moduleId ? { ...m, lessons: fn(m.lessons) } : m)));
+
+  const addLesson = (courseId: string, moduleId: string, input: Partial<Lesson>): Lesson => {
+    const m = findCourse(courseId)?.modules.find(x => x.id === moduleId);
+    const lesson: Lesson = {
+      id: newId(),
       moduleId,
-      title: data.title || 'Новый урок',
-      description: data.description,
-      order: 0,
-      type: data.type || 'text',
-      content: data.content || { type: data.type || 'text', data: {} },
+      title: input.title || 'Новый урок',
+      description: input.description,
+      order: (m?.lessons.length ?? 0) + 1,
+      type: input.type || 'text',
+      content: input.content || { type: input.type || 'text', data: {} },
       isLocked: false,
     };
-    setCourses(prev => prev.map(c => {
-      if (c.id !== courseId) return c;
-      return {
-        ...c,
-        modules: c.modules.map(m => {
-          if (m.id !== moduleId) return m;
-          const order = m.lessons.length + 1;
-          return { ...m, lessons: [...m.lessons, { ...newLesson, order }] };
-        }),
-        updatedAt: new Date().toISOString(),
-      };
-    }));
-    return newLesson;
-  }, []);
+    withLessons(courseId, moduleId, ls => [...ls, lesson]);
+    persist(trackLessonSave(lesson.id, backend.saveLesson(lesson, courseId)));
+    return lesson;
+  };
 
-  const updateLesson = useCallback((courseId: string, moduleId: string, lessonId: string, patch: Partial<Lesson>) => {
-    setCourses(prev => prev.map(c => {
-      if (c.id !== courseId) return c;
-      return {
-        ...c,
-        modules: c.modules.map(m => {
-          if (m.id !== moduleId) return m;
-          return { ...m, lessons: m.lessons.map(l => l.id === lessonId ? { ...l, ...patch } : l) };
-        }),
-        updatedAt: new Date().toISOString(),
-      };
-    }));
-  }, []);
+  const updateLesson = (courseId: string, moduleId: string, lessonId: string, patch: Partial<Lesson>) => {
+    const l = findCourse(courseId)?.modules.find(x => x.id === moduleId)?.lessons.find(x => x.id === lessonId);
+    if (!l) return;
+    const next = { ...l, ...patch };
+    withLessons(courseId, moduleId, ls => ls.map(x => (x.id === lessonId ? next : x)));
+    persist(trackLessonSave(lessonId, backend.saveLesson(next, courseId)));
+  };
 
-  const deleteLesson = useCallback((courseId: string, moduleId: string, lessonId: string) => {
-    setCourses(prev => prev.map(c => {
-      if (c.id !== courseId) return c;
-      return {
-        ...c,
-        modules: c.modules.map(m => {
-          if (m.id !== moduleId) return m;
-          return { ...m, lessons: m.lessons.filter(l => l.id !== lessonId) };
-        }),
-        updatedAt: new Date().toISOString(),
-      };
-    }));
-  }, []);
+  const deleteLesson = (courseId: string, moduleId: string, lessonId: string) => {
+    withLessons(courseId, moduleId, ls => ls.filter(l => l.id !== lessonId));
+    persist(backend.deleteLesson(lessonId));
+  };
+
+  const moveLesson = (courseId: string, moduleId: string, lessonId: string, direction: -1 | 1) => {
+    const m = findCourse(courseId)?.modules.find(x => x.id === moduleId);
+    if (!m) return;
+    const list = [...m.lessons];
+    const i = list.findIndex(l => l.id === lessonId);
+    const j = i + direction;
+    if (i < 0 || j < 0 || j >= list.length) return;
+    [list[i], list[j]] = [list[j], list[i]];
+    const renumbered = list.map((l, idx) => ({ ...l, order: idx + 1 }));
+    withLessons(courseId, moduleId, () => renumbered);
+    persist(Promise.all([renumbered[i], renumbered[j]].map(l => backend.saveLesson(l, courseId))));
+  };
 
   const getLesson = useCallback((courseId: string, lessonId: string) => {
-    const course = courses.find(c => c.id === courseId);
+    const course = data.courses.find(c => c.id === courseId);
     if (!course) return undefined;
     for (const m of course.modules) {
       const lesson = m.lessons.find(l => l.id === lessonId);
       if (lesson) return { lesson, module: m };
     }
     return undefined;
-  }, [courses]);
+  }, [data.courses]);
 
-  // ===== Enrollments =====
-  const enrollStudent = useCallback((userId: string, courseId: string) => {
-    setEnrollments(prev => {
-      const userCourses = prev[userId] || [];
-      if (userCourses.includes(courseId)) return prev;
-      return { ...prev, [userId]: [...userCourses, courseId] };
-    });
-    // Init progress
-    setProgress(prev => {
-      const userProgress = prev[userId] || {};
-      if (userProgress[courseId]) return prev;
-      return {
-        ...prev,
-        [userId]: {
-          ...userProgress,
-          [courseId]: {
-            userId,
-            courseId,
-            progress: 0,
-            completedLessons: [],
-            lastActivity: new Date().toISOString(),
-            totalTimeSpent: 0,
-          }
-        }
-      };
-    });
-  }, []);
+  // ===== Доступ =====
 
-  const unenrollStudent = useCallback((userId: string, courseId: string) => {
-    setEnrollments(prev => ({ ...prev, [userId]: (prev[userId] || []).filter(id => id !== courseId) }));
-  }, []);
-
-  const isEnrolled = useCallback((userId: string, courseId: string) => {
-    return (enrollments[userId] || []).includes(courseId);
-  }, [enrollments]);
-
-  // ===== Progress =====
-  const getCourseProgressFn = (userId: string, courseId: string, courseList: Course[], progressMap: Record<string, Record<string, StudentProgress>>) => {
-    const course = courseList.find(c => c.id === courseId);
-    if (!course) return 0;
-    const totalLessons = course.modules.reduce((sum, m) => sum + m.lessons.length, 0);
-    if (totalLessons === 0) return 0;
-    const userProgress = progressMap[userId]?.[courseId];
-    const completed = userProgress?.completedLessons.length || 0;
-    return Math.round((completed / totalLessons) * 100);
+  const enrollStudent = (userId: string, courseId: string) => {
+    const existing = data.enrollments.find(e => e.userId === userId && e.courseId === courseId);
+    const row: Enrollment = existing
+      ? { ...existing, status: 'active' }
+      : { id: newId(), userId, courseId, status: 'active', source: 'manual', createdAt: nowIso() };
+    setData(d => ({ ...d, enrollments: [...d.enrollments.filter(e => e.id !== row.id), row] }));
+    persist(backend.saveEnrollment(row));
   };
 
-  const getProgress = useCallback((userId: string, courseId: string) => {
-    return progress[userId]?.[courseId];
-  }, [progress]);
+  const unenrollStudent = (userId: string, courseId: string) => {
+    setData(d => ({ ...d, enrollments: d.enrollments.filter(e => !(e.userId === userId && e.courseId === courseId)) }));
+    persist(backend.deleteEnrollment(courseId, userId));
+  };
 
-  const markLessonComplete = useCallback((userId: string, courseId: string, lessonId: string) => {
-    setProgress(prev => {
-      const userProgress = prev[userId] || {};
-      const courseProgress = userProgress[courseId] || {
-        userId, courseId, progress: 0, completedLessons: [], lastActivity: new Date().toISOString(), totalTimeSpent: 0
-      };
-      if (courseProgress.completedLessons.includes(lessonId)) return prev;
-      const newCompletedLessons = [...courseProgress.completedLessons, lessonId];
-      const newProgress = getCourseProgressFn(userId, courseId, courses, {
-        ...prev,
-        [userId]: { ...userProgress, [courseId]: { ...courseProgress, completedLessons: newCompletedLessons } }
-      });
-      return {
-        ...prev,
-        [userId]: {
-          ...userProgress,
-          [courseId]: {
-            ...courseProgress,
-            completedLessons: newCompletedLessons,
-            progress: newProgress,
-            lastActivity: new Date().toISOString(),
-            totalTimeSpent: courseProgress.totalTimeSpent + 600,
-          }
-        }
-      };
-    });
-  }, [courses]);
+  const isEnrolled = useCallback((userId: string, courseId: string) => (enrollments[userId] || []).includes(courseId), [enrollments]);
 
-  const unmarkLessonComplete = useCallback((userId: string, courseId: string, lessonId: string) => {
-    setProgress(prev => {
-      const userProgress = prev[userId] || {};
-      const courseProgress = userProgress[courseId];
-      if (!courseProgress) return prev;
-      const newCompletedLessons = courseProgress.completedLessons.filter(id => id !== lessonId);
-      return {
-        ...prev,
-        [userId]: {
-          ...userProgress,
-          [courseId]: {
-            ...courseProgress,
-            completedLessons: newCompletedLessons,
-            progress: getCourseProgressFn(userId, courseId, courses, {
-              ...prev,
-              [userId]: { ...userProgress, [courseId]: { ...courseProgress, completedLessons: newCompletedLessons } }
-            }),
-          }
-        }
-      };
-    });
-  }, [courses]);
+  const enrollFree = async (courseId: string) => { await backend.enrollFree(courseId); await refresh(); };
+  const enrollByEmail = async (courseId: string, email: string) => { await backend.enrollByEmail(courseId, email); await refresh(); };
 
-  const isLessonComplete = useCallback((userId: string, courseId: string, lessonId: string) => {
-    return progress[userId]?.[courseId]?.completedLessons.includes(lessonId) || false;
-  }, [progress]);
-
-  const getCompletedLessonsCount = useCallback((userId: string) => {
-    const userProgress = progress[userId] || {};
-    return Object.values(userProgress).reduce((sum, p) => sum + p.completedLessons.length, 0);
-  }, [progress]);
-
-  const getCourseProgress = useCallback((userId: string, courseId: string) => {
-    return getCourseProgressFn(userId, courseId, courses, progress);
-  }, [courses, progress]);
-
-  // ===== Homework =====
-  const getHomeworkForStudent = useCallback((userId: string) => {
-    return homework.filter(h => h.studentId === userId);
-  }, [homework]);
-
-  const getHomeworkForCourse = useCallback((courseId: string) => {
-    return homework.filter(h => h.courseId === courseId);
-  }, [homework]);
-
-  const submitHomework = useCallback((data: Omit<Homework, 'id' | 'submittedAt' | 'status'> & { content: string }): Homework => {
-    const newHw: Homework = {
-      id: generateId('hw'),
-      lessonId: data.lessonId,
-      studentId: data.studentId,
-      courseId: data.courseId,
-      title: data.title,
-      description: data.description,
-      status: 'submitted',
-      submittedAt: new Date().toISOString(),
-      deadline: data.deadline,
-      submission: { type: 'text', content: data.content },
+  const createInvite = (courseId: string, opts?: { label?: string; maxUses?: number; expiresAt?: string }): Invite => {
+    const code = Array.from(crypto.getRandomValues(new Uint8Array(6)), b => b.toString(16).padStart(2, '0')).join('');
+    const invite: Invite = {
+      id: newId(), courseId, code, label: opts?.label, maxUses: opts?.maxUses, expiresAt: opts?.expiresAt,
+      uses: 0, active: true, createdAt: nowIso(),
     };
-    setHomework(prev => {
-      // Replace existing if any (by lesson + student)
-      const existing = prev.findIndex(h => h.lessonId === data.lessonId && h.studentId === data.studentId);
-      if (existing >= 0) {
-        const next = [...prev];
-        next[existing] = { ...next[existing], ...newHw, id: next[existing].id };
-        return next;
+    setData(d => ({ ...d, invites: [...d.invites, invite] }));
+    persist(backend.saveInvite(invite));
+    return invite;
+  };
+
+  const setInviteActive = (inviteId: string, active: boolean) => {
+    const inv = data.invites.find(i => i.id === inviteId);
+    if (!inv) return;
+    const next = { ...inv, active };
+    setData(d => ({ ...d, invites: d.invites.map(i => (i.id === inviteId ? next : i)) }));
+    persist(backend.saveInvite(next));
+  };
+
+  const inviteInfo = (code: string) => backend.inviteInfo(code);
+  const redeemInvite = async (code: string) => {
+    const courseId = await backend.redeemInvite(code);
+    await refresh();
+    return courseId;
+  };
+
+  // ===== Прогресс =====
+
+  const getProgress = useCallback((userId: string, courseId: string) => progress[userId]?.[courseId], [progress]);
+
+  const markLessonComplete = (userId: string, courseId: string, lessonId: string) => {
+    if (data.progress.some(p => p.userId === userId && p.lessonId === lessonId)) return;
+    const row: LessonProgressRow = { userId, courseId, lessonId, completedAt: nowIso() };
+    setData(d => ({ ...d, progress: [...d.progress, row] }));
+    persist(backend.setLessonComplete(row, true));
+  };
+
+  const unmarkLessonComplete = (userId: string, courseId: string, lessonId: string) => {
+    const row = data.progress.find(p => p.userId === userId && p.lessonId === lessonId);
+    if (!row) return;
+    setData(d => ({ ...d, progress: d.progress.filter(p => p !== row) }));
+    persist(backend.setLessonComplete({ ...row, courseId }, false));
+  };
+
+  const isLessonComplete = useCallback(
+    (userId: string, courseId: string, lessonId: string) => progress[userId]?.[courseId]?.completedLessons.includes(lessonId) || false,
+    [progress],
+  );
+
+  const getCompletedLessonsCount = useCallback(
+    (userId: string) => Object.values(progress[userId] || {}).reduce((sum, p) => sum + p.completedLessons.length, 0),
+    [progress],
+  );
+
+  const getCourseProgress = useCallback((userId: string, courseId: string) => progress[userId]?.[courseId]?.progress ?? 0, [progress]);
+
+  // ===== Тесты =====
+
+  const saveQuizKey = (key: QuizKey) => {
+    setData(d => ({ ...d, quizKeys: [...d.quizKeys.filter(k => k.lessonId !== key.lessonId), key] }));
+    const pending = lessonSaves.current.get(key.lessonId) ?? Promise.resolve();
+    persist(pending.then(() => backend.saveQuizKey(key)));
+  };
+
+  const submitQuiz = async (lessonId: string, answers: Record<string, string[]>) => {
+    const result = await backend.submitQuiz(lessonId, answers);
+    const u = userRef.current;
+    if (result.passed && u) {
+      const lesson = data.courses.flatMap(c => c.modules.flatMap(m => m.lessons.map(l => ({ l, courseId: c.id })))).find(x => x.l.id === lessonId);
+      // Сотрудник в предпросмотре не записан на курс — сервер прохождение не сохраняет, и мы тоже
+      const enrolled = lesson && data.enrollments.some(e => e.userId === u.id && e.courseId === lesson.courseId && e.status !== 'revoked');
+      if (lesson && enrolled && !data.progress.some(p => p.userId === u.id && p.lessonId === lessonId)) {
+        setData(d => ({ ...d, progress: [...d.progress, { userId: u.id, courseId: lesson.courseId, lessonId, completedAt: nowIso() }] }));
       }
-      return [...prev, newHw];
-    });
-    return newHw;
-  }, []);
+    }
+    return result;
+  };
 
-  const reviewHomework = useCallback((id: string, status: 'approved' | 'returned', feedback: string, reviewerId: string) => {
-    setHomework(prev => prev.map(h => h.id === id ? {
-      ...h,
-      status,
-      feedback,
-      reviewerId,
-      reviewedAt: new Date().toISOString(),
-    } : h));
-  }, []);
+  // ===== Уведомления =====
 
-  // ===== Chat =====
-  const sendMessage = useCallback((fromUserId: string, toUserId: string, content: string): ChatMessage => {
-    const msg: ChatMessage = {
-      id: generateId('msg'),
-      fromUserId,
-      toUserId,
-      content,
-      createdAt: new Date().toISOString(),
-      read: false,
+  const markNotificationsRead = (ids: string[]) => {
+    const unread = ids.filter(id => data.notifications.some(n => n.id === id && !n.read));
+    if (!unread.length) return;
+    setData(d => ({ ...d, notifications: d.notifications.map(n => (unread.includes(n.id) ? { ...n, read: true } : n)) }));
+    persist(backend.markNotificationsRead(unread));
+  };
+
+  // ===== Домашние задания =====
+
+  const getHomeworkForStudent = useCallback((userId: string) => data.homework.filter(h => h.studentId === userId), [data.homework]);
+  const getHomeworkForCourse = useCallback((courseId: string) => data.homework.filter(h => h.courseId === courseId), [data.homework]);
+
+  const submitHomework = (input: Omit<Homework, 'id' | 'submittedAt' | 'status'> & { content: string; files?: AttachedFile[] }): Homework => {
+    const existing = data.homework.find(h => h.lessonId === input.lessonId && h.studentId === input.studentId);
+    const hw: Homework = {
+      ...(existing ?? {}),
+      id: existing?.id ?? newId(),
+      lessonId: input.lessonId,
+      studentId: input.studentId,
+      courseId: input.courseId,
+      title: input.title,
+      description: input.description,
+      deadline: input.deadline,
+      status: 'submitted',
+      submittedAt: nowIso(),
+      submission: { type: 'text', content: input.content },
+      files: input.files ?? existing?.files ?? [],
     };
-    const key = chatKey(fromUserId, toUserId);
-    setChats(prev => ({ ...prev, [key]: [...(prev[key] || []), msg] }));
-    return msg;
-  }, []);
+    setData(d => ({ ...d, homework: [...d.homework.filter(h => h.id !== hw.id), hw] }));
+    persist(backend.saveHomework(hw));
+    return hw;
+  };
 
-  const getChatMessages = useCallback((a: string, b: string) => {
-    return chats[chatKey(a, b)] || [];
-  }, [chats]);
+  const reviewHomework = (id: string, status: 'approved' | 'returned', feedback: string, reviewerId: string) => {
+    const hw = data.homework.find(h => h.id === id);
+    if (!hw) return;
+    const next: Homework = { ...hw, status, feedback, reviewerId, reviewedAt: nowIso() };
+    // Принятое ДЗ засчитывает урок (на сервере это делает триггер), возврат — снимает отметку
+    setData(d => {
+      const progressRows = d.progress.filter(p => !(p.userId === hw.studentId && p.lessonId === hw.lessonId));
+      if (status === 'approved') progressRows.push({ userId: hw.studentId, courseId: hw.courseId, lessonId: hw.lessonId, completedAt: nowIso() });
+      return { ...d, homework: d.homework.map(h => (h.id === id ? next : h)), progress: progressRows };
+    });
+    persist(backend.saveHomework(next));
+  };
+
+  // ===== Чат =====
+
+  const sendMessage = (fromUserId: string, toUserId: string, content: string): ChatMessage => {
+    const msg: ChatMessage = { id: newId(), fromUserId, toUserId, content, createdAt: nowIso(), read: false };
+    setData(d => ({ ...d, messages: [...d.messages, msg] }));
+    persist(backend.sendMessage(msg));
+    return msg;
+  };
+
+  const getChatMessages = useCallback((a: string, b: string) => chats[chatKey(a, b)] || [], [chats]);
 
   const getChatThreads = useCallback((userId: string): ChatThread[] => {
     const threads: ChatThread[] = [];
@@ -416,41 +519,47 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
       const [u1, u2] = key.split('|');
       if (u1 !== userId && u2 !== userId) continue;
       const otherId = u1 === userId ? u2 : u1;
-      const lastMessage = messages[messages.length - 1];
-      const unreadCount = messages.filter(m => m.toUserId === userId && !m.read).length;
+      const other = usersById.get(otherId);
       threads.push({
         withUserId: otherId,
-        withUserName: '',
-        lastMessage,
-        unreadCount,
+        withUserName: other?.name ?? '',
+        withUserAvatar: other?.avatar,
+        lastMessage: messages[messages.length - 1],
+        unreadCount: messages.filter(m => m.toUserId === userId && !m.read).length,
       });
     }
-    return threads.sort((a, b) => {
-      const ta = a.lastMessage ? new Date(a.lastMessage.createdAt).getTime() : 0;
-      const tb = b.lastMessage ? new Date(b.lastMessage.createdAt).getTime() : 0;
-      return tb - ta;
-    });
-  }, [chats]);
+    return threads.sort((a, b) => (b.lastMessage?.createdAt ?? '').localeCompare(a.lastMessage?.createdAt ?? ''));
+  }, [chats, usersById]);
 
-  const markChatRead = useCallback((userId: string, withUserId: string) => {
-    const key = chatKey(userId, withUserId);
-    setChats(prev => {
-      const messages = prev[key] || [];
-      return { ...prev, [key]: messages.map(m => m.toUserId === userId ? { ...m, read: true } : m) };
-    });
-  }, []);
+  const markChatRead = (userId: string, withUserId: string) => {
+    const hasUnread = data.messages.some(m => m.toUserId === userId && m.fromUserId === withUserId && !m.read);
+    if (!hasUnread) return;
+    setData(d => ({
+      ...d,
+      messages: d.messages.map(m => (m.toUserId === userId && m.fromUserId === withUserId ? { ...m, read: true } : m)),
+    }));
+    persist(backend.markRead(userId, withUserId));
+  };
 
   return (
     <DataStoreContext.Provider value={{
-      courses, enrollments, progress, homework, chats,
+      loading, refresh,
+      courses: data.courses, users: data.users, getUser,
+      enrollmentRecords: data.enrollments, invites: data.invites,
+      quizKeys: data.quizKeys, notifications: data.notifications, progressRows: data.progress,
+      saveQuizKey, submitQuiz, markNotificationsRead,
+      enrollments, progress, homework: data.homework, chats,
       createCourse, updateCourse, deleteCourse, getCourse,
-      addModule, updateModule, deleteModule,
-      addLesson, updateLesson, deleteLesson, getLesson,
-      enrollStudent, unenrollStudent, isEnrolled,
+      addModule, updateModule, deleteModule, moveModule,
+      addLesson, updateLesson, deleteLesson, moveLesson, getLesson,
+      enrollStudent, unenrollStudent, isEnrolled, enrollFree, enrollByEmail,
+      createInvite, setInviteActive, inviteInfo, redeemInvite,
       getProgress, markLessonComplete, unmarkLessonComplete, isLessonComplete,
       getCompletedLessonsCount, getCourseProgress,
       getHomeworkForStudent, getHomeworkForCourse, submitHomework, reviewHomework,
       sendMessage, getChatMessages, getChatThreads, markChatRead,
+      uploadFile: (bucket, path, file) => backend.uploadFile(bucket, path, file),
+      fileUrl: (bucket, path) => backend.fileUrl(bucket, path),
     }}>
       {children}
     </DataStoreContext.Provider>

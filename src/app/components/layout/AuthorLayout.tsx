@@ -4,12 +4,7 @@ import {
   BookOpen,
   Users,
   BarChart3,
-  Globe,
-  Zap,
-  CreditCard,
-  FileText,
   LogOut,
-  Palette,
   UserCog,
   Calendar,
   MessageSquare,
@@ -19,6 +14,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Button } from '../ui/button';
 import { useAuth } from '../../context/AuthContext';
 import { MobileNav } from '../MobileNav';
+import { NotificationBell } from '../NotificationBell';
+import { DemoBanner } from '../DemoBanner';
 import { motion } from 'motion/react';
 import logoWhiteFull from '@/assets/logo/logo-full-white.png';
 
@@ -27,23 +24,17 @@ const navigation = [
   { name: 'Курсы', href: '/author/courses', icon: BookOpen },
   { name: 'Ученики', href: '/author/students', icon: Users },
   { name: 'Домашки', href: '/author/homework', icon: FileCheck },
-  { name: 'CRM', href: '/author/crm', icon: UserCog },
   { name: 'Аналитика', href: '/author/analytics', icon: BarChart3 },
   { name: 'Чаты', href: '/author/chat', icon: MessageSquare },
-  { name: 'Вселенная', href: '/author/course-universe', icon: Palette },
+  { name: 'CRM', href: '/author/crm', icon: UserCog },
   { name: 'Календарь', href: '/author/calendar', icon: Calendar },
-  { name: 'Страницы', href: '/author/pages', icon: Globe },
-  { name: 'Команда', href: '/author/team', icon: Users },
-  { name: 'Потоки', href: '/author/flows', icon: Zap },
-  { name: 'Платежи', href: '/author/payments', icon: CreditCard },
-  { name: 'Контент', href: '/author/content', icon: FileText },
 ];
 
 export function AuthorLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const isActive = (path: string) => location.pathname === path;
+  const isActive = (path: string) => location.pathname === path || (path !== '/author' && location.pathname.startsWith(path + '/'));
 
   const handleLogout = () => {
     logout();
@@ -82,13 +73,14 @@ export function AuthorLayout() {
 
   return (
     <div className="flex flex-col md:flex-row h-screen bg-[#F5F4F2]">
-      <MobileNav navigation={navigation} rootHref="/author" footer={userFooter} />
+      <MobileNav navigation={navigation} rootHref="/author" footer={userFooter} actions={<NotificationBell variant="dark" />} />
 
       <aside className="hidden md:flex w-[200px] bg-[#1A1A2E] flex-col">
-        <div className="p-6">
+        <div className="p-6 pr-3 flex items-center justify-between gap-2">
           <Link to="/author" className="flex items-center gap-2">
             <img src={logoWhiteFull} alt="Unick" className="h-6" />
           </Link>
+          <NotificationBell variant="dark" side="right" align="start" />
         </div>
 
         <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
@@ -125,6 +117,7 @@ export function AuthorLayout() {
           animate={{ opacity: 1 }}
           transition={{ duration: 0.15 }}
         >
+          <DemoBanner />
           <Outlet />
         </motion.div>
       </main>

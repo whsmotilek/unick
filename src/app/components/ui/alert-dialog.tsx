@@ -28,12 +28,13 @@ function AlertDialogPortal({
   );
 }
 
-function AlertDialogOverlay({
-  className,
-  ...props
-}: React.ComponentProps<typeof AlertDialogPrimitive.Overlay>) {
-  return (
+// forwardRef: Radix Presence передаёт ref оверлею (React 18 не принимает ref у функциональных компонентов)
+const AlertDialogOverlay = React.forwardRef<
+  React.ElementRef<typeof AlertDialogPrimitive.Overlay>,
+  React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Overlay>
+>(({ className, ...props }, ref) => (
     <AlertDialogPrimitive.Overlay
+      ref={ref}
       data-slot="alert-dialog-overlay"
       className={cn(
         "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/50",
@@ -41,8 +42,8 @@ function AlertDialogOverlay({
       )}
       {...props}
     />
-  );
-}
+));
+AlertDialogOverlay.displayName = 'AlertDialogOverlay';
 
 function AlertDialogContent({
   className,
