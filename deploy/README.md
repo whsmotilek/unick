@@ -4,11 +4,11 @@
 |---|---|
 | Хостинг | Beget VPS, Санкт-Петербург, Ubuntu 24.04, 4 ядра / 6 ГБ / 80 ГБ NVMe |
 | IP | `159.194.245.212` |
-| Платформа | https://unick.159-194-245-212.sslip.io |
-| API Supabase | https://api.unick.159-194-245-212.sslip.io |
-| Studio (админка БД) | https://api.unick.159-194-245-212.sslip.io (логин `unick-admin`, пароль: `DASHBOARD_PASSWORD` в `/opt/unick/supabase/.env`) |
+| Платформа | https://unick.online (www и старый адрес unick.159-194-245-212.sslip.io перенаправляют сюда) |
+| API Supabase | https://api.unick.online |
+| Studio (админка БД) | https://api.unick.online (логин `unick-admin`, пароль: `DASHBOARD_PASSWORD` в `/opt/unick/supabase/.env`) |
 
-`sslip.io` — временные адреса, которые сами указывают на IP. После покупки домена см. «Переезд на свой домен».
+Домен `unick.online` (Beget). DNS: A-записи `@`, `www`, `api` → `159.194.245.212`.
 
 ## Что где лежит
 
@@ -50,7 +50,7 @@ ssh unick 'docker exec -i supabase-db psql -U postgres -d postgres -v ON_ERROR_S
 Перед этим прогнать тесты прав доступа локально (`supabase/tests/run.sh`) и смоук-тест против сервера:
 
 ```bash
-SUPABASE_URL=https://api.unick.159-194-245-212.sslip.io SUPABASE_ANON_KEY=<anon> node scripts/smoke.mjs
+SUPABASE_URL=https://api.unick.online SUPABASE_ANON_KEY=<anon> node scripts/smoke.mjs
 ```
 
 Смоук создаёт пользователей `*@smoke.unick.test` — потом удалить:
@@ -87,7 +87,9 @@ ssh unick "docker exec supabase-db psql -U postgres -c \"update profiles set rol
 2. В `/opt/unick/supabase/.env` заполнить `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_ADMIN_EMAIL` и поставить `ENABLE_EMAIL_AUTOCONFIRM=false`.
 3. Выполнить `sh run.sh recreate auth`.
 
-## Переезд на свой домен
+## Смена домена
+
+Скрипт `deploy/switch-domain.sh <домен>` (на сервере) делает пункт 2 автоматически.
 
 1. DNS: A-записи `@` и `api` на `159.194.245.212`.
 2. На сервере в `/opt/unick/supabase/.env` заменить `unick.159-194-245-212.sslip.io` на домен в `SITE_URL`, `SUPABASE_PUBLIC_URL`, `API_EXTERNAL_URL`, `PROXY_DOMAIN`, `ADDITIONAL_REDIRECT_URLS`. В `docker-compose.unick.yml` поменять `APP_DOMAIN`. Затем выполнить `sh run.sh recreate`.
