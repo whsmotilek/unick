@@ -39,6 +39,13 @@ jobs:
           </head><body><p>Unick переехал: <a href="${APP_URL}/">${APP_URL}</a></p></body></html>
           HTML
           cp dist/index.html dist/404.html
+      - uses: actions/checkout@v4
+        with:
+          path: src-repo
+      - name: Страницы для команды (/secretplan)
+        run: |
+          mkdir -p dist/secretplan
+          cp src-repo/pages/secretplan/index.html dist/secretplan/index.html
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

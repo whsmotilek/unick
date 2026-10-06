@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Unick: пилот для команды</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=DM+Sans:wght@400;500;700&display=swap">
+<style>
+  /* Макет: одна колонка документа + липкая навигация по разделам; палитра и шрифты — из самого продукта Unick */
+  :root {
+    --bg: #F5F4F2;
+    --surface: #FFFFFF;
+    --ink: #1A1A2E;
+    --muted: #6E6E80;
+    --line: #E4E2EC;
+    --accent: #7C6AF7;
+    --accent-soft: #EDE9FF;
+    --ok: #2D7A4F;
+    --ok-soft: #E3F3E8;
+    --warn: #8A5A00;
+    --warn-soft: #FFF2D6;
+    --font-display: 'Manrope', 'Segoe UI', system-ui, sans-serif;
+    --font-body: 'DM Sans', 'Segoe UI', system-ui, sans-serif;
+    --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #13131D; --surface: #1C1C29; --ink: #ECEBF5; --muted: #A3A2B8; --line: #2E2D40;
+      --accent: #9D8FFA; --accent-soft: #2A2547; --ok: #7FD3A0; --ok-soft: #1B3326; --warn: #F2C46B; --warn-soft: #3A2E14;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #13131D; --surface: #1C1C29; --ink: #ECEBF5; --muted: #A3A2B8; --line: #2E2D40;
+    --accent: #9D8FFA; --accent-soft: #2A2547; --ok: #7FD3A0; --ok-soft: #1B3326; --warn: #F2C46B; --warn-soft: #3A2E14;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  body { background: var(--bg); color: var(--ink); font: 400 16px/1.6 var(--font-body); margin: 0; }
+  .page { max-width: 820px; margin: 0 auto; padding-inline: 20px; padding-block: 28px 80px; }
+
+  header.top { display: flex; flex-direction: column; gap: 10px; padding-block: 8px 20px; }
+  .brand { font: 800 15px/1 var(--font-display); letter-spacing: .02em; color: var(--accent); }
+  h1 { font: 800 clamp(28px, 6vw, 40px)/1.12 var(--font-display); margin: 0; text-wrap: balance; }
+  .lede { color: var(--muted); margin: 0; max-width: 62ch; }
+  .site { display: inline-flex; align-items: center; gap: 8px; font: 500 15px/1 var(--font-mono); color: var(--ink);
+          background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; width: fit-content; }
+  .site a { color: inherit; }
+
+  nav.toc { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg);
+            display: flex; gap: 6px; overflow-x: auto; padding-block: 10px; margin-bottom: 8px; border-bottom: 1px solid var(--line); }
+  nav.toc a { flex: none; text-decoration: none; color: var(--ink); font: 500 14px/1 var(--font-body);
+              padding: 10px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); }
+  nav.toc a:hover, nav.toc a:focus-visible { border-color: var(--accent); color: var(--accent); outline: none; }
+
+  section { padding-block: 28px 8px; scroll-margin-top: 70px; }
+  section + section { border-top: 1px solid var(--line); }
+  .sec-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+  h2 { font: 800 24px/1.2 var(--font-display); margin: 0; text-wrap: balance; }
+  h2 .who { color: var(--accent); }
+  h3 { font: 700 17px/1.3 var(--font-display); margin: 22px 0 8px; }
+  p { margin: 0 0 12px; max-width: 68ch; }
+  ul, ol { margin: 0 0 12px; padding-left: 22px; max-width: 70ch; }
+  li { margin-bottom: 6px; }
+  li::marker { color: var(--muted); }
+  code, .mono { font-family: var(--font-mono); font-size: .9em; background: var(--accent-soft); padding: 1px 6px; border-radius: 6px; word-break: break-word; }
+  b, strong { font-weight: 700; }
+
+  .copy { flex: none; font: 500 14px/1 var(--font-body); color: var(--accent); background: var(--accent-soft);
+          border: 0; border-radius: 10px; padding: 10px 14px; cursor: pointer; min-height: 40px; }
+  .copy:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .copy[data-done] { color: var(--ok); background: var(--ok-soft); }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; margin-bottom: 8px; }
+  .tile { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; min-width: 0; }
+  .tile h4 { margin: 0 0 6px; font: 700 15px/1.3 var(--font-display); }
+  .tile ul { margin: 0; padding-left: 18px; font-size: 15px; }
+  .tile li { margin-bottom: 4px; }
+
+  .note { border-radius: 12px; padding: 12px 14px; margin: 12px 0; font-size: 15px; max-width: 70ch; }
+  .note.warn { background: var(--warn-soft); color: var(--warn); }
+  .note.info { background: var(--accent-soft); color: var(--ink); }
+
+  /* Таймлайн совместного прогона — реальная последовательность шагов, поэтому нумерация */
+  .flow { list-style: none; padding: 0; margin: 0 0 12px; display: grid; gap: 10px; max-width: none; }
+  .flow li { display: grid; grid-template-columns: 34px 1fr; gap: 12px; align-items: start; background: var(--surface);
+             border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; margin: 0; }
+  .flow .n { width: 34px; height: 34px; border-radius: 10px; background: var(--accent); color: #fff; display: grid; place-items: center;
+             font: 800 15px/1 var(--font-display); font-variant-numeric: tabular-nums; }
+  .flow .who-tag { display: inline-block; font: 700 12px/1 var(--font-body); letter-spacing: .04em; text-transform: uppercase;
+                   color: var(--accent); margin-bottom: 4px; }
+  .flow p { margin: 0; }
+
+  /* Чек-листы: отметки хранятся только в браузере проверяющего */
+  .checks { list-style: none; padding: 0; margin: 0 0 12px; max-width: none; }
+  .checks li { margin: 0; border-bottom: 1px solid var(--line); }
+  .checks label { display: grid; grid-template-columns: 24px 1fr; gap: 12px; align-items: start; padding: 11px 2px; cursor: pointer; }
+  .checks input { width: 20px; height: 20px; margin: 2px 0 0; accent-color: var(--accent); }
+  .checks input:checked + span { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--line); }
+  .checks .exp { display: block; color: var(--muted); font-size: 14px; margin-top: 2px; }
+  .progress { font: 500 13px/1 var(--font-body); color: var(--muted); font-variant-numeric: tabular-nums; }
+
+  .bug { background: var(--surface); border: 1px dashed var(--line); border-radius: 14px; padding: 14px 16px; font-size: 15px; }
+  .bug dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; margin: 0; }
+  .bug dt { font-weight: 700; }
+  .bug dd { margin: 0; color: var(--muted); min-width: 0; }
+
+  footer { color: var(--muted); font-size: 13px; padding-top: 30px; }
+  @media (max-width: 480px) {
+    .page { padding-inline: 16px; }
+    .bug dl { grid-template-columns: 1fr; }
+    .bug dd { margin-bottom: 6px; }
+  }
+  @media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <header class="top">
+    <span class="brand">unick.</span>
+    <h1>Пилотная версия платформы</h1>
+    <p class="lede">Что уже работает, как пройти полный путь автора и ученика и что делать, если что-то сломалось. Тестируем на боевом сайте.</p>
+    <span class="site">Сайт: <a href="https://unick.online" target="_blank" rel="noopener">unick.online</a></span>
+  </header>
+
+  <nav class="toc" aria-label="Разделы">
+    <a href="#summary">Что есть</a>
+    <a href="#plan">План тестирования</a>
+    <a href="#daniil">Даниил · автор</a>
+    <a href="#lera">Лера · ученик</a>
+    <a href="#bugs">Как сообщить о проблеме</a>
+  </nav>
+
+  <!-- ============ СВОДКА ============ -->
+  <section id="summary" data-copy>
+    <div class="sec-head">
+      <h2>Что есть в системе</h2>
+      <button class="copy" type="button">Скопировать текст</button>
+    </div>
+    <p>Unick — платформа, где автор собирает курс, приглашает учеников по ссылке и ведёт обучение: проверяет домашние задания, отвечает в чате, видит прогресс. Сейчас это пилотная версия для первых авторов.</p>
+
+    <div class="grid">
+      <div class="tile">
+        <h4>Автор</h4>
+        <ul>
+          <li>Регистрация с модерацией: кабинет открывается после одобрения</li>
+          <li>Конструктор курса: модули и уроки — видео, текст, материалы, домашнее задание, тест</li>
+          <li>Видео по ссылке YouTube, VK Видео, Rutube, Kinescope или файлом до 50 МБ</li>
+          <li>Доступ: по приглашению или свободная запись; режим «уроки по порядку»</li>
+          <li>Ссылки-приглашения с лимитом мест, добавление ученика по email</li>
+          <li>Проверка ДЗ: принять или вернуть с комментарием</li>
+          <li>Аналитика: на каком уроке ученики останавливаются, кто давно не заходил</li>
+          <li>Уведомления и чат с учениками</li>
+        </ul>
+      </div>
+      <div class="tile">
+        <h4>Ученик</h4>
+        <ul>
+          <li>Вход в курс по ссылке: регистрация и сразу курс</li>
+          <li>Уроки, материалы для скачивания, сдача ДЗ с файлами</li>
+          <li>Тесты: ответы проверяет сервер, правильные варианты видны только после сдачи</li>
+          <li>Прогресс, сроки ДЗ, уведомления о проверке</li>
+          <li>Чат с автором, смена пароля в профиле</li>
+          <li>Удобно с телефона</li>
+        </ul>
+      </div>
+      <div class="tile">
+        <h4>Администратор</h4>
+        <ul>
+          <li>Заявки авторов: одобрить или отклонить</li>
+          <li>Цели пилота: 5 авторов, 5 курсов, 50 учеников</li>
+          <li>Все школы, курсы и ученики, источники записи</li>
+        </ul>
+      </div>
+      <div class="tile">
+        <h4>Надёжность</h4>
+        <ul>
+          <li>Сервер в России (Санкт-Петербург), данные учеников хранятся в РФ</li>
+          <li>Права доступа проверяются на уровне базы данных</li>
+          <li>Защита от перебора паролей, ежедневные бэкапы</li>
+          <li>Автотесты перед каждым обновлением сайта</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>Чего пока нет</h3>
+    <ul>
+      <li><b>Писем на почту.</b> Регистрация не требует подтверждения email, уведомления приходят только в колокольчик на сайте. Забыли пароль — напишите администратору, он задаст временный.</li>
+      <li><b>Оплаты.</b> Платный курс автор продаёт сам, а доступ выдаёт ссылкой-приглашением.</li>
+      <li><b>Больших видеофайлов.</b> Видео больше 50 МБ добавляйте ссылкой (лучше Kinescope или VK Видео).</li>
+    </ul>
+  </section>
+
+  <!-- ============ ПЛАН ============ -->
+  <section id="plan" data-copy>
+    <div class="sec-head">
+      <h2>План совместного тестирования</h2>
+      <button class="copy" type="button">Скопировать текст</button>
+    </div>
+    <p>Даниил проходит путь автора, Лера — ученика. Шаги зависят друг от друга, поэтому лучше договориться о времени и держать связь в общем чате. На весь прогон нужно около полутора часов.</p>
+
+    <ol class="flow">
+      <li><span class="n">1</span><div><span class="who-tag">Даниил</span><p>Регистрируется как автор и пишет в чат: «Зарегистрировался, одобрите».</p></div></li>
+      <li><span class="n">2</span><div><span class="who-tag">Администратор</span><p>Открывает <code>unick.online/admin</code> → «Заявки авторов» → «Одобрить».</p></div></li>
+      <li><span class="n">3</span><div><span class="who-tag">Даниил</span><p>Собирает тестовый курс (30–40 минут), создаёт ссылку-приглашение и отправляет её Лере.</p></div></li>
+      <li><span class="n">4</span><div><span class="who-tag">Лера</span><p>Регистрируется по ссылке с телефона, проходит уроки до домашнего задания и сдаёт его.</p></div></li>
+      <li><span class="n">5</span><div><span class="who-tag">Даниил</span><p>Возвращает ДЗ на доработку с комментарием.</p></div></li>
+      <li><span class="n">6</span><div><span class="who-tag">Лера</span><p>Исправляет и сдаёт снова. Пишет Даниилу в чат.</p></div></li>
+      <li><span class="n">7</span><div><span class="who-tag">Даниил</span><p>Принимает работу и отвечает в чате.</p></div></li>
+      <li><span class="n">8</span><div><span class="who-tag">Лера</span><p>Проходит тест (сначала с ошибкой, потом верно) и заканчивает курс.</p></div></li>
+      <li><span class="n">9</span><div><span class="who-tag">Оба</span><p>Повторяют несколько шагов на другом устройстве (телефон ↔ компьютер) и отправляют замечания.</p></div></li>
+    </ol>
+    <div class="note info">Тестовые аккаунты и курс останутся на платформе. Если они помешают в пилоте, администратор удалит их после тестирования.</div>
+  </section>
+
+  <!-- ============ ДАНИИЛ ============ -->
+  <section id="daniil" data-copy data-checklist="daniil">
+    <div class="sec-head">
+      <h2><span class="who">Даниил</span> — путь автора</h2>
+      <button class="copy" type="button">Скопировать текст</button>
+    </div>
+    <p>Задача: собрать курс так, как это сделал бы реальный автор, и провести Леру через обучение. Записывай всё, что непонятно или неудобно, даже если в итоге получилось. <span class="progress" data-progress></span></p>
+
+    <h3>1. Регистрация</h3>
+    <ul class="checks">
+      <li><label><input type="checkbox"><span>Открой <code>unick.online/register?role=author</code>, вкладка «Я автор». Укажи имя, email, пароль от 8 символов и название школы, поставь галочку согласия.<span class="exp">Ожидаем: экран «Спасибо за регистрацию!» — заявка на рассмотрении.</span></span></label></li>
+      <li><label><input type="checkbox"><span>Напиши в общий чат, что ждёшь одобрения. Не закрывай страницу.<span class="exp">После одобрения кабинет откроется сам в течение 30 секунд или по кнопке «Проверить статус».</span></span></label></li>
+    </ul>
+
+    <h3>2. Курс</h3>
+    <ul class="checks">
+      <li><label><input type="checkbox"><span>«Курсы» → «Создать курс». Название, описание, «Доступ: По приглашению», включи «Уроки по порядку», статус «Опубликован» → «Создать курс».</span></label></li>
+      <li><label><input type="checkbox"><span>В «Настройках» загрузи обложку (картинку до 5 МБ).<span class="exp">Обложка сохраняется сразу, без кнопки «Сохранить».</span></span></label></li>
+      <li><label><input type="checkbox"><span>«Содержимое» → добавь модуль «Введение».</span></label></li>
+      <li><label><input type="checkbox"><span>Урок «Видео»: вставь обычную ссылку на YouTube или VK Видео.<span class="exp">В окне сразу появляется плеер.</span></span></label></li>
+      <li><label><input type="checkbox"><span>Урок «Текст»: оформи заголовок, жирный текст, список, ссылку. Прикрепи PDF в «Материалы к уроку».</span></label></li>
+      <li><label><input type="checkbox"><span>Урок «Домашнее задание»: опиши задание, срок сдачи 3 дня.</span></label></li>
+      <li><label><input type="checkbox"><span>Урок «Тест»: два вопроса, во втором — два правильных ответа (отметь галочками). Порог 100%.</span></label></li>
+      <li><label><input type="checkbox"><span>Ещё один текстовый урок «Итоги» — он должен открыться ученику только после принятого ДЗ.</span></label></li>
+      <li><label><input type="checkbox"><span>Поменяй порядок уроков стрелками (на телефоне — через «⋯»), переименуй модуль.</span></label></li>
+      <li><label><input type="checkbox"><span>Нажми «Как видит ученик» и пролистай все уроки.<span class="exp">В тесте ответы проверяются, но прохождение не засчитывается — это предпросмотр.</span></span></label></li>
+    </ul>
+
+    <h3>3. Приглашение</h3>
+    <ul class="checks">
+      <li><label><input type="checkbox"><span>«Ученики и доступ» → название ссылки, лимит мест 3 → «Создать ссылку». Отправь ссылку Лере.</span></label></li>
+      <li><label><input type="checkbox"><span>Дождись, пока Лера вступит.<span class="exp">В колокольчике «Новый ученик», Лера появляется в списке учеников курса со счётчиком «Вступил 1 человек».</span></span></label></li>
+    </ul>
+
+    <h3>4. Проверка домашнего задания</h3>
+    <ul class="checks">
+      <li><label><input type="checkbox"><span>Когда придёт уведомление «Новое домашнее задание» → «Домашки» → открой работу Леры, проверь её текст и файл.</span></label></li>
+      <li><label><input type="checkbox"><span>Напиши комментарий → «На доработку».<span class="exp">Без комментария вернуть нельзя — так задумано.</span></span></label></li>
+      <li><label><input type="checkbox"><span>После повторной сдачи открой работу снова.<span class="exp">Поле ответа пустое, прошлый комментарий показан сверху.</span></span></label></li>
+      <li><label><input type="checkbox"><span>Нажми «Принять».<span class="exp">У Леры откроется урок «Итоги».</span></span></label></li>
+    </ul>
+
+    <h3>5. Общение и аналитика</h3>
+    <ul class="checks">
+      <li><label><input type="checkbox"><span>Ответь Лере в «Чатах».</span></label></li>
+      <li><label><input type="checkbox"><span>«Аналитика»: выбери курс, посмотри воронку по урокам и активность.</span></label></li>
+      <li><label><input type="checkbox"><span>«Ученики» и «CRM»: найди Леру, посмотри её прогресс.</span></label></li>
+      <li><label><input type="checkbox"><span>«Календарь»: виден срок сдачи ДЗ.</span></label></li>
+    </ul>
+
+    <h3>6. Проверки на прочность</h3>
+    <ul class="checks">
+      <li><label><input type="checkbox"><span>Отключи ссылку-приглашение и открой её в режиме инкогнито.<span class="exp">Ожидаем: «Приглашение больше не действует».</span></span></label></li>
+      <li><label><input type="checkbox"><span>Создай второй курс-черновик и попробуй удалить первый курс.<span class="exp">Курс с учениками нельзя удалить без ввода его названия. Удалять не нужно — нажми «Отмена».</span></span></label></li>
+      <li><label><input type="checkbox"><span>Повтори пункты 2 и 4 с телефона: добавь урок и проверь работу.</span></label></li>
+      <li><label><input type="checkbox"><span>«Профиль» → смени пароль, выйди и войди с новым.</span></label></li>
+    </ul>
+  </section>
+
+  <!-- ============ ЛЕРА ============ -->
+  <section id="lera" data-copy data-checklist="lera">
+    <div class="sec-head">
+      <h2><span class="who">Лера</span> — путь ученика</h2>
+      <button class="copy" type="button">Скопировать текст</button>
+    </div>
+    <p>Задача: пройти курс Даниила как обычный ученик — в основном с телефона. Обращай внимание на всё, где пришлось думать, искать кнопку или что-то выглядело странно. <span class="progress" data-progress></span></p>
+
+    <h3>1. Вход в курс</h3>
+    <ul class="checks">
+      <li><label><input type="checkbox"><span>Открой ссылку-приглашение от Даниила на телефоне.<span class="exp">Видна карточка курса: название, описание, число уроков.</span></span></label></li>
+      <li><label><input type="checkbox"><span>«Зарегистрироваться и начать» → имя, email, пароль от 8 символов, галочка согласия → «Создать аккаунт».<span class="exp">Сразу открывается страница курса — без выбора роли и подтверждения почты.</span></span></label></li>
+    </ul>
+
+    <h3>2. Обучение</h3>
+    <ul class="checks">
+      <li><label><input type="checkbox"><span>«Начать обучение» → посмотри видео → «Пройдено, дальше».</span></label></li>
+      <li><label><input type="checkbox"><span>Текстовый урок: прочитай, скачай PDF из «Материалов урока».</span></label></li>
+      <li><label><input type="checkbox"><span>Открой список уроков курса (кнопка со списком над уроком).<span class="exp">Уроки после ДЗ закрыты замком.</span></span></label></li>
+      <li><label><input type="checkbox"><span>Домашнее задание: напиши ответ, прикрепи фото с телефона → «Отправить на проверку».<span class="exp">Статус «На проверке», срок сдачи виден на уроке и в «Календаре».</span></span></label></li>
+    </ul>
+
+    <h3>3. Доработка</h3>
+    <ul class="checks">
+      <li><label><input type="checkbox"><span>Дождись уведомления в колокольчике «Задание вернули на доработку» и нажми на него.<span class="exp">Открывается урок с комментарием Даниила.</span></span></label></li>
+      <li><label><input type="checkbox"><span>Исправь ответ и отправь снова.</span></label></li>
+      <li><label><input type="checkbox"><span>На странице курса нажми «Написать автору» и задай вопрос.<span class="exp">Сразу открывается переписка с Даниилом.</span></span></label></li>
+      <li><label><input type="checkbox"><span>После «Домашнее задание принято» проверь, что урок «Итоги» открылся.</span></label></li>
+    </ul>
+
+    <h3>4. Тест и завершение</h3>
+    <ul class="checks">
+      <li><label><input type="checkbox"><span>Пройди тест специально с ошибкой.<span class="exp">«Пока не получилось», ошибочный вопрос отмечен красным, правильные ответы не показаны.</span></span></label></li>
+      <li><label><input type="checkbox"><span>«Пройти заново» → ответь верно.<span class="exp">«Тест пройден!», правильные варианты подсвечены, урок отмечен «Пройдено».</span></span></label></li>
+      <li><label><input type="checkbox"><span>Закончи курс и проверь главную, «Мои курсы», «Домашки», «Прогресс».<span class="exp">Везде 100%, ДЗ «Принято».</span></span></label></li>
+    </ul>
+
+    <h3>5. Проверки на прочность</h3>
+    <ul class="checks">
+      <li><label><input type="checkbox"><span>Выйди и войди снова на компьютере — весь прогресс на месте.</span></label></li>
+      <li><label><input type="checkbox"><span>Скопируй адрес любого урока, открой в режиме инкогнито.<span class="exp">Сайт попросит войти, урок не показывается.</span></span></label></li>
+      <li><label><input type="checkbox"><span>«Каталог»: курс Даниила виден как «Вы записаны», чужих закрытых курсов нет.</span></label></li>
+      <li><label><input type="checkbox"><span>«Профиль» → смени пароль, выйди и войди с новым.</span></label></li>
+      <li><label><input type="checkbox"><span>Пройдись по разделам меню на телефоне: всё помещается, ничего не обрезано, кнопки удобно нажимать.</span></label></li>
+    </ul>
+  </section>
+
+  <!-- ============ БАГИ ============ -->
+  <section id="bugs" data-copy>
+    <div class="sec-head">
+      <h2>Как сообщить о проблеме</h2>
+      <button class="copy" type="button">Скопировать текст</button>
+    </div>
+    <p>Пишите в общий чат команды сразу, не копите до конца. Одно сообщение — одна проблема.</p>
+    <div class="bug">
+      <dl>
+        <dt>Где</dt><dd>Адрес страницы или раздел меню</dd>
+        <dt>Что делали</dt><dd>По шагам, коротко</dd>
+        <dt>Что ожидали</dt><dd>Как должно было быть</dd>
+        <dt>Что получилось</dt><dd>Текст ошибки, если была</dd>
+        <dt>Устройство</dt><dd>Телефон или компьютер, браузер</dd>
+        <dt>Скриншот</dt><dd>Обязательно, если что-то выглядит не так</dd>
+      </dl>
+    </div>
+    <div class="note warn">Не присылайте в чат пароли. Если не получается войти, напишите администратору — он задаст временный пароль.</div>
+  </section>
+
+  <footer>Версия от 7 октября 2026. Отметки в чек-листах сохраняются только в вашем браузере.</footer>
+</div>
+
+<script>
+  // Копирование раздела как обычного текста (для мессенджера)
+  function sectionText(sec) {
+    const out = [];
+    sec.querySelectorAll('h2, h3, p, li, .tile h4, dt, .note').forEach(el => {
+      if (el.closest('.flow') && el.tagName !== 'LI') return;
+      if (el.tagName === 'LI' && el.closest('.flow')) {
+        const who = el.querySelector('.who-tag')?.textContent || '';
+        const n = el.querySelector('.n')?.textContent || '';
+        out.push(`${n}. ${who}: ${el.querySelector('p')?.textContent || ''}`);
+        return;
+      }
+      if (el.tagName === 'DT') { out.push(`${el.textContent}: ${el.nextElementSibling?.textContent || ''}`); return; }
+      if (el.tagName === 'LI' && el.closest('.tile') === null && el.closest('.checks')) {
+        const main = el.querySelector('span')?.childNodes;
+        let t = ''; main?.forEach(n => { if (n.nodeType === 3 || (n.nodeType === 1 && !n.classList.contains('exp'))) t += n.textContent; });
+        const exp = el.querySelector('.exp')?.textContent;
+        out.push(`☐ ${t.trim()}${exp ? `\n   → ${exp}` : ''}`);
+        return;
+      }
+      if (el.tagName === 'LI') { out.push(`• ${el.textContent.trim()}`); return; }
+      if (el.tagName === 'H2') { out.push(el.textContent.trim().toUpperCase()); return; }
+      if (el.tagName === 'H3' || el.tagName === 'H4') { out.push(`\n${el.textContent.trim()}`); return; }
+      if (el.matches('[data-progress]')) return;
+      const txt = el.textContent.replace(/\d+ из \d+ отмечено/, '').trim();
+      if (txt) out.push(txt);
+    });
+    return 'Unick · unick.online\n\n' + out.join('\n').replace(/\n{3,}/g, '\n\n');
+  }
+  document.querySelectorAll('section[data-copy]').forEach(sec => {
+    const btn = sec.querySelector('.copy');
+    btn.addEventListener('click', () => {
+      const text = sectionText(sec);
+      const done = () => { btn.dataset.done = ''; btn.textContent = 'Скопировано'; setTimeout(() => { delete btn.dataset.done; btn.textContent = 'Скопировать текст'; }, 1800); };
+      const fallback = () => {
+        const ta = document.createElement('textarea'); ta.value = text; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.opacity = '0';
+        document.body.appendChild(ta); ta.select();
+        try { document.execCommand('copy'); done(); } catch { btn.textContent = 'Выделите текст вручную'; }
+        ta.remove();
+      };
+      try { navigator.clipboard.writeText(text).then(done, fallback); } catch { fallback(); }
+    });
+  });
+
+  // Чек-листы: отметки в localStorage этого браузера
+  document.querySelectorAll('section[data-checklist]').forEach(sec => {
+    const key = 'unick-check-' + sec.dataset.checklist;
+    const boxes = [...sec.querySelectorAll('.checks input')];
+    const prog = sec.querySelector('[data-progress]');
+    let saved = [];
+    try { saved = JSON.parse(localStorage.getItem(key) || '[]'); } catch {}
+    boxes.forEach((b, i) => { b.id = `${sec.dataset.checklist}-${i}`; b.checked = !!saved[i]; });
+    const update = () => {
+      const n = boxes.filter(b => b.checked).length;
+      if (prog) prog.textContent = `${n} из ${boxes.length} отмечено`;
+      try { localStorage.setItem(key, JSON.stringify(boxes.map(b => b.checked))); } catch {}
+    };
+    boxes.forEach(b => b.addEventListener('change', update));
+    update();
+  });
+</script>
+</body>
+</html>
