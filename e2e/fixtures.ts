@@ -41,7 +41,7 @@ export async function loginAs(page: Page, email: string, next?: string) {
 
 type DemoDb = {
   courses: { id: string; title: string }[];
-  lessons: { id: string; courseId: string; title: string }[];
+  lessons: { id: string; courseId: string; title: string; content?: unknown }[];
 };
 
 /** Прочитать id курса/уроков из демо-БД в localStorage. */
