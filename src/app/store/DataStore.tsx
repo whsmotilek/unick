@@ -513,7 +513,7 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
       if (status === 'approved') progressRows.push({ userId: hw.studentId, courseId: hw.courseId, lessonId: hw.lessonId, completedAt: nowIso() });
       return { ...d, homework: d.homework.map(h => (h.id === id ? next : h)), progress: progressRows };
     });
-    persist(backend.saveHomework(next));
+    persist(backend.reviewHomework(next));
   };
 
   // ===== Чат =====

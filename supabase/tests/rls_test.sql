@@ -98,7 +98,8 @@ do $$ begin
 exception when raise_exception then if sqlerrm like 'FAIL%' then raise; end if; raise notice 'ok  самозапись на invite-курс запрещена'; end $$;
 select pg_temp.check(redeem_invite('join-a') = '10000000-0000-0000-0000-000000000001', 'ученик вступает по инвайту');
 select pg_temp.check((select count(*) from lessons) = 2, 'после записи ученик видит уроки');
-select pg_temp.check((select count(*) from profiles) = 2, 'ученик видит себя и автора курса');
+select pg_temp.check((select count(*) from profiles where role <> 'admin') = 2, 'ученик видит себя и автора курса');
+select pg_temp.check((select count(*) from profiles where role = 'admin') = 1, 'ученик видит администратора (поддержка)');
 
 -- Прогресс и ДЗ
 do $$ begin
@@ -119,7 +120,7 @@ do $$ begin perform redeem_invite('join-a'); raise exception 'FAIL: лимит �
 exception when raise_exception then if sqlerrm like 'FAIL%' then raise; end if; raise notice 'ok  лимит использований инвайта'; end $$;
 select pg_temp.check((select count(*) from homework) = 0, 'ученик 2 не видит чужие ДЗ');
 select pg_temp.check((select count(*) from lesson_progress) = 0, 'ученик 2 не видит чужой прогресс');
-select pg_temp.check((select count(*) from profiles) = 1, 'ученик 2 видит только себя');
+select pg_temp.check((select count(*) from profiles where role <> 'admin') = 1, 'ученик 2 не видит чужих пользователей (кроме поддержки)');
 do $$ begin
   insert into messages (from_id, to_id, content) values (auth.uid(), '00000000-0000-0000-0000-00000000000a', 'спам');
   raise exception 'FAIL: сообщение незнакомцу прошло';
@@ -198,6 +199,27 @@ select pg_temp.login('00000000-0000-0000-0000-00000000000b');
 do $$ begin perform submit_quiz('30000000-0000-0000-0000-000000000005', '{}');
   raise exception 'FAIL: тест сдан без доступа к курсу';
 exception when raise_exception then if sqlerrm like 'FAIL%' then raise; end if; raise notice 'ok  нельзя сдать тест чужого курса'; end $$;
+
+-- ===== Переписка с администратором =====
+select pg_temp.login('00000000-0000-0000-0000-0000000000ad');
+insert into messages (from_id, to_id, content) values (auth.uid(), '00000000-0000-0000-0000-00000000000b', 'Как дела?');
+select pg_temp.login('00000000-0000-0000-0000-00000000000b');
+select pg_temp.check((select count(*) from profiles where role = 'admin') = 1, 'автор видит профиль администратора (поддержка)');
+insert into messages (from_id, to_id, content) values (auth.uid(), '00000000-0000-0000-0000-0000000000ad', 'Всё хорошо');
+select pg_temp.check((select count(*) from messages where to_id = '00000000-0000-0000-0000-0000000000ad') = 1, 'автор отвечает администратору');
+select pg_temp.login('00000000-0000-0000-0000-0000000000ad');
+select pg_temp.check((select link from notifications where type = 'message' and user_id = auth.uid() order by created_at desc limit 1) like '/author/chat?with=%', 'ссылка уведомления администратора ведёт в чат');
+
+-- ===== Проверка ДЗ: обновлением (так делает интерфейс), upsert от имени автора запрещён =====
+select pg_temp.login('00000000-0000-0000-0000-00000000000a');
+do $$ begin
+  insert into homework (id, lesson_id, course_id, student_id, status, feedback)
+  select id, lesson_id, course_id, student_id, 'returned', 'upsert' from homework limit 1
+  on conflict (lesson_id, student_id) do update set status = excluded.status;
+  raise exception 'FAIL: upsert ДЗ от имени автора прошёл';
+exception when insufficient_privilege then raise notice 'ok  upsert ДЗ автором запрещён (интерфейс использует update)'; end $$;
+update homework set status = 'returned', feedback = 'Доработайте' where status = 'approved';
+select pg_temp.check((select status from homework limit 1) = 'returned', 'автор возвращает ДЗ обновлением');
 
 -- Аноним
 select pg_temp.login(null);

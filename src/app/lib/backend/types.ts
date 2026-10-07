@@ -48,7 +48,11 @@ export interface Backend {
   markNotificationsRead(ids: string[]): Promise<void>;
   /** Только администратор: решение по заявке автора */
   setAuthorStatus(userId: string, status: 'pending' | 'approved' | 'rejected'): Promise<void>;
+  /** Ученик сдаёт или пересдаёт работу (вставка или обновление своей строки) */
   saveHomework(hw: Homework): Promise<void>;
+  /** Автор/куратор проверяет работу: только обновление существующей строки.
+   *  Upsert здесь нельзя — правило вставки разрешает создавать ДЗ только ученику. */
+  reviewHomework(hw: Homework): Promise<void>;
 
   sendMessage(msg: ChatMessage): Promise<void>;
   markRead(userId: string, withUserId: string): Promise<void>;
