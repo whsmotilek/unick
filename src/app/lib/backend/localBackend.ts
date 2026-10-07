@@ -255,6 +255,10 @@ export function createLocalBackend(currentUser: () => User | null): Backend {
       commit({ ...db, messages: db.messages.map(m => m.toUserId === userId && m.fromUserId === withUserId ? { ...m, read: true } : m) });
     },
 
+    async reviewHomework(h) {
+      if (!db.homework.some(x => x.id === h.id)) throw new Error('Работа не найдена или нет прав на проверку');
+      await this.saveHomework(h);
+    },
     async saveQuizKey(k) {
       commit({ ...db, quizKeys: upsert(db.quizKeys, k, x => x.lessonId === k.lessonId) });
     },

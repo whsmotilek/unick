@@ -144,6 +144,12 @@ export function createSupabaseBackend(sb: SupabaseClient): Backend {
         check(await sb.from('lesson_progress').delete().eq('user_id', row.userId).eq('lesson_id', row.lessonId));
       }
     },
+    async reviewHomework(h) {
+      const rows = check(await sb.from('homework').update({
+        status: h.status, feedback: h.feedback ?? null, reviewer_id: h.reviewerId ?? null, reviewed_at: h.reviewedAt ?? null,
+      }).eq('id', h.id).select('id')) as { id: string }[];
+      if (!rows.length) throw new Error('Работа не найдена или нет прав на проверку');
+    },
     async saveQuizKey(k) {
       check(await sb.from('quiz_keys').upsert({
         lesson_id: k.lessonId, course_id: k.courseId, answers: k.answers, pass_percent: k.passPercent,

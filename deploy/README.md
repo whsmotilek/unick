@@ -53,7 +53,13 @@ ssh unick 'docker exec -i supabase-db psql -U postgres -d postgres -v ON_ERROR_S
 SUPABASE_URL=https://api.unick.online SUPABASE_ANON_KEY=<anon> node scripts/smoke.mjs
 ```
 
-Смоук создаёт пользователей `*@smoke.unick.test` — потом удалить:
+Главный смоук — через код приложения (те же запросы, что делает интерфейс), сам убирает за собой:
+```bash
+SUPABASE_URL=https://api.unick.online SUPABASE_ANON_KEY=<anon> SMOKE_SSH=unick npx vite-node scripts/smoke-app.ts
+```
+Уборка вручную (тестовые пользователи и файлы удалённых курсов): `ssh unick 'bash /opt/unick/cleanup.sh'` (`DRY_RUN=1` — только показать).
+
+Старый смоук `scripts/smoke.mjs` создаёт пользователей `*@smoke.unick.test` — потом удалить:
 ```sql
 delete from public.schools where owner_id in (select id from auth.users where email like '%@smoke.unick.test');
 delete from auth.users where email like '%@smoke.unick.test';
