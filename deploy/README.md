@@ -72,11 +72,9 @@ delete from auth.users where email like '%@smoke.unick.test';
 2. Подготовить папку: `course.json` (структура — в начале `scripts/import-course.ts`), видео, обложка.
 3. Импорт: `SUPABASE_URL=https://api.unick.online SUPABASE_SERVICE_KEY=$(ssh unick "grep '^SERVICE_ROLE_KEY=' /opt/unick/supabase/.env | cut -d= -f2-") npx vite-node scripts/import-course.ts -- <папка> [--dry-run]`
 4. Проверка глазами ученика: `SUPABASE_URL=… SUPABASE_ANON_KEY=… SMOKE_SSH=unick npx vite-node scripts/verify-course.ts -- <course_id>`
-5. Передать курс автору (после его регистрации и одобрения):
-   ```bash
-   ssh unick "docker exec supabase-db psql -U postgres -c \"update courses set school_id = (select school_id from profiles where email='author@example.com') where id='<course_id>'\""
-   ```
-6. Администраторы курса — кураторы школы автора (раздел «Роли»).
+5. Команда курса — `scripts/course-team.ts` (тот же `SUPABASE_SERVICE_KEY`, что для импорта):
+   - `add <course_id> <email>` — администратор курса с правами автора в школе, где сейчас курс (зарегистрироваться как «Я ученик»);
+   - `transfer <course_id> <автор_email> [<email> …]` — одобрить автора (регистрация «Я автор»), перенести курс в его школу и перевести туда команду. Вопросы учеников уходят владельцу школы.
 
 ## Управление Supabase
 
