@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { Upload } from 'tus-js-client';
 import type {
   AppNotification, ChatMessage, Course, Enrollment, Homework, Invite, Lesson, LessonProgressRow, QuizKey, QuizResult, User,
 } from '../../types';
@@ -57,7 +58,32 @@ function check<T>(res: { data: T | null; error: { message: string } | null }): T
   return res.data as T;
 }
 
-export function createSupabaseBackend(sb: SupabaseClient): Backend {
+/** Файлы больше этого размера загружаются частями (Tus) */
+const RESUMABLE_FROM = 6 * 1024 * 1024;
+
+async function uploadResumable(sb: SupabaseClient, baseUrl: string, bucket: string, path: string, file: File, onProgress?: (f: number) => void) {
+  const { data } = await sb.auth.getSession();
+  const token = data.session?.access_token;
+  if (!token) throw new Error('Нужно войти в аккаунт');
+  await new Promise<void>((resolve, reject) => {
+    const upload = new Upload(file, {
+      endpoint: `${baseUrl}/storage/v1/upload/resumable`,
+      retryDelays: [0, 2000, 5000, 10000, 20000],
+      headers: { authorization: `Bearer ${token}`, 'x-upsert': 'false' },
+      uploadDataDuringCreation: true,
+      removeFingerprintOnSuccess: true,
+      chunkSize: 6 * 1024 * 1024, // требование Supabase Storage
+      metadata: { bucketName: bucket, objectName: path, contentType: file.type || 'application/octet-stream', cacheControl: '3600' },
+      onError: e => reject(new Error(e.message.includes('413') ? 'Файл слишком большой' : `Загрузка прервалась: ${e.message}`)),
+      onProgress: (sent, total) => onProgress?.(total ? sent / total : 0),
+      onSuccess: () => resolve(),
+    });
+    // Продолжить ранее прерванную загрузку того же файла, если она есть
+    upload.findPreviousUploads().then(prev => { if (prev.length) upload.resumeFromPreviousUpload(prev[0]); upload.start(); });
+  });
+}
+
+export function createSupabaseBackend(sb: SupabaseClient, opts: { url?: string } = {}): Backend {
   return {
     async load() {
       const [courses, modules, lessons, enrollments, progress, homework, messages, profiles, invites, quizKeys, notifications] = await Promise.all([
@@ -182,15 +208,20 @@ export function createSupabaseBackend(sb: SupabaseClient): Backend {
       check(await sb.from('messages').update({ read: true }).eq('to_id', userId).eq('from_id', withUserId).eq('read', false));
     },
 
-    async uploadFile(bucket: FileBucket, path: string, file: File) {
+    async uploadFile(bucket: FileBucket, path: string, file: File, onProgress?: (f: number) => void) {
       // Пути уникальны (uuid), поэтому без upsert: для перезаписи нужна была бы ещё политика UPDATE
-      check(await sb.storage.from(bucket).upload(path, file, { upsert: false, contentType: file.type || undefined }));
+      if (file.size > RESUMABLE_FROM && opts.url) {
+        await uploadResumable(sb, opts.url, bucket, path, file, onProgress);
+      } else {
+        check(await sb.storage.from(bucket).upload(path, file, { upsert: false, contentType: file.type || undefined }));
+        onProgress?.(1);
+      }
       if (bucket === 'covers') return sb.storage.from(bucket).getPublicUrl(path).data.publicUrl;
       return path;
     },
     async fileUrl(bucket: FileBucket, path: string) {
       if (/^https?:\/\//.test(path)) return path;
-      const { data, error } = await sb.storage.from(bucket).createSignedUrl(path, 60 * 60);
+      const { data, error } = await sb.storage.from(bucket).createSignedUrl(path, 6 * 60 * 60);
       if (error) throw new Error(error.message);
       return data.signedUrl;
     },

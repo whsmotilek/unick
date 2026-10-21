@@ -58,7 +58,7 @@ export interface Backend {
   markRead(userId: string, withUserId: string): Promise<void>;
 
   /** Загружает файл, возвращает путь для хранения в данных (для covers — публичный URL). */
-  uploadFile(bucket: FileBucket, path: string, file: File): Promise<string>;
+  uploadFile(bucket: FileBucket, path: string, file: File, onProgress?: (fraction: number) => void): Promise<string>;
   /** Ссылка для просмотра приватного файла. */
   fileUrl(bucket: FileBucket, path: string): Promise<string>;
 }

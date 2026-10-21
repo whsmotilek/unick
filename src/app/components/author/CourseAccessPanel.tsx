@@ -11,6 +11,7 @@ import { useDataStore } from '../../store/DataStore';
 import { appUrl } from '../../lib/supabase';
 import type { Course, EnrollmentSource } from '../../types';
 import { pluralize } from '../../lib/analytics';
+import { OneTimeInvites } from './OneTimeInvites';
 
 /** «Вступили 3 человека из 10», «Вступил 1 человек», «Пока никто не вступил · 10 мест» */
 function joinedLabel(uses: number, maxUses?: number | null): string {
@@ -45,7 +46,7 @@ export function CourseAccessPanel({ course }: { course: Course }) {
   const [email, setEmail] = useState('');
   const [busy, setBusy] = useState(false);
 
-  const courseInvites = useMemo(() => invites.filter(i => i.courseId === course.id).sort((a, b) => b.createdAt.localeCompare(a.createdAt)), [invites, course.id]);
+  const courseInvites = useMemo(() => invites.filter(i => i.courseId === course.id && i.maxUses !== 1).sort((a, b) => b.createdAt.localeCompare(a.createdAt)), [invites, course.id]);
   const students = useMemo(
     () => enrollmentRecords.filter(e => e.courseId === course.id && e.status !== 'revoked').sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
     [enrollmentRecords, course.id],
@@ -131,6 +132,8 @@ export function CourseAccessPanel({ course }: { course: Course }) {
           )}
         </CardContent>
       </Card>
+
+      <OneTimeInvites course={course} />
 
       <Card className="border-0">
         <CardContent className="p-4 sm:p-6 max-sm:[&:last-child]:pb-4 space-y-4">

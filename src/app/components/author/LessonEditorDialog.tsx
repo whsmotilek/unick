@@ -184,7 +184,7 @@ export function LessonEditorDialog({
                   label="Загрузить файл" className="max-sm:h-10 sm:h-10" onUploaded={f => patch({ url: f.path })} />
               </div>
               <p className="text-xs text-[#8A8A9A]">
-                Для платного курса лучше использовать Kinescope или загружать файл: ссылку на YouTube ученик может переслать кому угодно.
+                Файл до 2 ГБ можно перетащить на кнопку: он загрузится частями, видео увидят только ученики курса. Сжатое видео (720p) грузится и смотрится быстрее. Ссылку на YouTube ученик может переслать кому угодно.
               </p>
               {data.url && <div className="sm:max-w-md"><VideoPlayer url={data.url} title={title} /></div>}
             </div>

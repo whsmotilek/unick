@@ -65,6 +65,19 @@ delete from public.schools where owner_id in (select id from auth.users where em
 delete from auth.users where email like '%@smoke.unick.test';
 ```
 
+## Перенос готового курса за автора
+
+1. Сжать видео (720p30, faststart):
+   `ffmpeg -i in.MOV -c:v libx264 -preset medium -crf 23 -vf "scale=-2:720,fps=30" -c:a aac -b:a 96k -ac 1 -movflags +faststart out.mp4`
+2. Подготовить папку: `course.json` (структура — в начале `scripts/import-course.ts`), видео, обложка.
+3. Импорт: `SUPABASE_URL=https://api.unick.online SUPABASE_SERVICE_KEY=$(ssh unick "grep '^SERVICE_ROLE_KEY=' /opt/unick/supabase/.env | cut -d= -f2-") npx vite-node scripts/import-course.ts -- <папка> [--dry-run]`
+4. Проверка глазами ученика: `SUPABASE_URL=… SUPABASE_ANON_KEY=… SMOKE_SSH=unick npx vite-node scripts/verify-course.ts -- <course_id>`
+5. Передать курс автору (после его регистрации и одобрения):
+   ```bash
+   ssh unick "docker exec supabase-db psql -U postgres -c \"update courses set school_id = (select school_id from profiles where email='author@example.com') where id='<course_id>'\""
+   ```
+6. Администраторы курса — кураторы школы автора (раздел «Роли»).
+
 ## Управление Supabase
 
 ```bash
