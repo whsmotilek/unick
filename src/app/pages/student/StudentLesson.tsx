@@ -17,6 +17,7 @@ import { VideoPlayer } from '../../components/lesson/VideoPlayer';
 import { FileList } from '../../components/lesson/FileList';
 import { HomeworkPanel } from '../../components/lesson/HomeworkPanel';
 import { QuizPlayer } from '../../components/lesson/QuizPlayer';
+import { AskAuthor } from '../../components/lesson/AskAuthor';
 import { PageSkeleton } from '../../components/skeletons/PageSkeleton';
 import { sanitizeHtml } from '../../lib/sanitize';
 import { flattenCourse } from '../../lib/courseAccess';
@@ -163,6 +164,8 @@ export function StudentLesson() {
               deadline={homeworkDeadline(data, enrolledAt)} readOnly={preview} />
           </div>
         )}
+
+        {!preview && <AskAuthor schoolId={course.schoolId} lessonTitle={lesson.title} />}
       </div>
     );
   };

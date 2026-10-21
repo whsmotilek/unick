@@ -27,7 +27,10 @@ export function ChatPage() {
   useEffect(() => {
     if (!withParam) return;
     if (withParam !== user?.id) setActiveUserId(withParam);
-    setSearchParams(p => { p.delete('with'); return p; }, { replace: true });
+    // ?text= — готовое начало сообщения (например, «Вопрос по уроку …» со страницы урока)
+    const text = searchParams.get('text');
+    if (text) setDraft(text);
+    setSearchParams(p => { p.delete('with'); p.delete('text'); return p; }, { replace: true });
   }, [withParam, user?.id, setSearchParams]);
 
   const allUsers = users;

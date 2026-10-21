@@ -1,6 +1,7 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+export const supabaseUrl = url;
 const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
 
 /** Клиент Supabase. null — бэкенд не настроен, приложение работает в демо-режиме (localStorage). */

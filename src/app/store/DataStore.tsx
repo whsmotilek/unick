@@ -5,7 +5,7 @@ import {
   Enrollment, Invite, InviteInfo, LessonProgressRow, AttachedFile, QuizKey, QuizResult, AppNotification,
 } from '../types';
 import { useAuth } from '../context/AuthContext';
-import { supabase } from '../lib/supabase';
+import { supabase, supabaseUrl } from '../lib/supabase';
 import { createSupabaseBackend } from '../lib/backend/supabaseBackend';
 import { createLocalBackend } from '../lib/backend/localBackend';
 import { errorMessage, type Backend, type FileBucket, type Snapshot } from '../lib/backend/types';
@@ -99,7 +99,7 @@ interface DataStoreContextType {
   markChatRead(userId: string, withUserId: string): void;
 
   // Файлы
-  uploadFile(bucket: FileBucket, path: string, file: File): Promise<string>;
+  uploadFile(bucket: FileBucket, path: string, file: File, onProgress?: (fraction: number) => void): Promise<string>;
   fileUrl(bucket: FileBucket, path: string): Promise<string>;
 }
 
@@ -121,7 +121,7 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
   userRef.current = user;
 
   const backend: Backend = useMemo(
-    () => (supabase ? createSupabaseBackend(supabase) : createLocalBackend(() => userRef.current)),
+    () => (supabase ? createSupabaseBackend(supabase, { url: supabaseUrl }) : createLocalBackend(() => userRef.current)),
     [],
   );
 
@@ -572,7 +572,7 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
       getCompletedLessonsCount, getCourseProgress,
       getHomeworkForStudent, getHomeworkForCourse, submitHomework, reviewHomework,
       sendMessage, getChatMessages, getChatThreads, markChatRead,
-      uploadFile: (bucket, path, file) => backend.uploadFile(bucket, path, file),
+      uploadFile: (bucket, path, file, onProgress) => backend.uploadFile(bucket, path, file, onProgress),
       fileUrl: (bucket, path) => backend.fileUrl(bucket, path),
     }}>
       {children}
