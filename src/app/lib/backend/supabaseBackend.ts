@@ -86,7 +86,7 @@ async function uploadResumable(sb: SupabaseClient, baseUrl: string, bucket: stri
 export function createSupabaseBackend(sb: SupabaseClient, opts: { url?: string } = {}): Backend {
   return {
     async load() {
-      const [courses, modules, lessons, enrollments, progress, homework, messages, profiles, invites, quizKeys, notifications] = await Promise.all([
+      const [courses, modules, lessons, enrollments, progress, homework, messages, profiles, invites, quizKeys, notifications, schools] = await Promise.all([
         sb.from('courses').select('*').order('created_at'),
         sb.from('modules').select('*'),
         sb.from('lessons').select('*'),
@@ -98,7 +98,9 @@ export function createSupabaseBackend(sb: SupabaseClient, opts: { url?: string }
         sb.from('invites').select('*').order('created_at'),
         sb.from('quiz_keys').select('*'),
         sb.from('notifications').select('*').order('created_at', { ascending: false }).limit(100),
+        sb.from('schools').select('owner_id'),
       ]);
+      const owners = new Set(check(schools).map((s: Row) => s.owner_id));
       return {
         courses: assembleCourses(
           check(courses).map(toCourse), check(modules).map(toModule), check(lessons).map(toLesson),
@@ -109,7 +111,7 @@ export function createSupabaseBackend(sb: SupabaseClient, opts: { url?: string }
         })),
         homework: check(homework).map(toHomework),
         messages: check(messages).map(toMessage),
-        users: check(profiles).map(toUser),
+        users: check(profiles).map(r => ({ ...toUser(r), ownsSchool: owners.has(r.id) || undefined })),
         invites: check(invites).map(toInvite),
         quizKeys: check(quizKeys).map(toQuizKey),
         notifications: check(notifications).map(toNotification),

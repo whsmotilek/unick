@@ -6,7 +6,9 @@ import { useDataStore } from '../../store/DataStore';
 /** «Задать вопрос автору»: открывает чат с автором курса, в поле уже подставлено название урока. */
 export function AskAuthor({ schoolId, lessonTitle }: { schoolId: string; lessonTitle: string }) {
   const { users } = useDataStore();
-  const author = users.find(u => u.schoolId === schoolId && u.role === 'author')
+  // Вопросы идут владельцу школы; остальные авторы и кураторы — запасной вариант
+  const author = users.find(u => u.schoolId === schoolId && u.role === 'author' && u.ownsSchool)
+    ?? users.find(u => u.schoolId === schoolId && u.role === 'author')
     ?? users.find(u => u.schoolId === schoolId && (u.role === 'curator' || u.role === 'admin'));
   if (!author) return null;
   const text = `Вопрос по уроку «${lessonTitle}»: `;
